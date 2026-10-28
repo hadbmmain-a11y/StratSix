@@ -538,6 +538,27 @@ audio{width:100%;max-width:420px}
 .site-foot{max-width:1180px;margin:8px auto 0;padding:18px 16px 28px;border-top:1px solid var(--line, #D4E4E0);color:var(--muted, #5B7773);font-size:.78rem;line-height:1.5}
 .site-foot p{margin:0;max-width:760px}
 
+
+/* Motion: dashboard + My progress (subtle; disabled for reduced-motion users) */
+@keyframes moIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes moFill{from{width:0}}
+@keyframes moPulse{0%{transform:scale(1);opacity:.75}100%{transform:scale(2.6);opacity:0}}
+@keyframes moDrift{0%{transform:translateX(-30px)}50%{transform:translateX(30px)}100%{transform:translateX(-30px)}}
+@keyframes moFlag{0%,100%{transform:skewY(0) scaleX(1)}50%{transform:skewY(-5deg) scaleX(.93)}}
+@keyframes moDraw{from{stroke-dashoffset:var(--len)}to{stroke-dashoffset:0}}
+@keyframes moFall{0%{transform:translate3d(0,-10vh,0) rotate(0);opacity:1}100%{transform:translate3d(var(--dx),105vh,0) rotate(var(--rot));opacity:.9}}
+.mo-on .mo-i{animation:moIn .55s cubic-bezier(.2,.7,.2,1) both;animation-delay:calc(var(--i,0)*70ms)}
+.mo-on .meter > i{animation:moFill 1s cubic-bezier(.2,.7,.2,1) both;animation-delay:.25s}
+.sec-card,.panel{transition:border-color .15s,transform .2s,box-shadow .2s}
+.sec-card:hover{box-shadow:var(--shadow)}
+.panel:hover{box-shadow:var(--shadow)}
+.route .cur-pulse{fill:none;stroke:#F2C14E;stroke-width:2;transform-box:fill-box;transform-origin:center;animation:moPulse 2.2s ease-out infinite}
+.route .cloud{fill:#EAF6F2;fill-opacity:.09;animation:moDrift 18s ease-in-out infinite}
+.route .cloud.b{animation-duration:26s;animation-delay:-9s;fill-opacity:.06}
+.route .flag{transform-box:fill-box;transform-origin:left center;animation:moFlag 3.2s ease-in-out infinite}
+.mo-on .route .lit{stroke-dasharray:var(--len);animation:moDraw 1.6s .3s cubic-bezier(.4,0,.2,1) both}
+.confetti{position:fixed;top:0;z-index:90;width:9px;height:14px;border-radius:2px;pointer-events:none;animation:moFall var(--t,1.9s) cubic-bezier(.3,.6,.4,1) forwards}
+@media (prefers-reduced-motion:reduce){.mo-on .mo-i,.mo-on .meter > i,.mo-on .route .lit{animation:none}.route .cur-pulse,.route .cloud,.route .flag{animation:none}.confetti{display:none}.sec-card,.panel{transition:none}}
 </style>
 <script type="application/json" id="bs-access">{"reading":{"mode":"dates","s":"2026-10-05","e":"2026-10-27","r":9},"listening":{"mode":"closed","s":"","e":"","r":2},"writing":{"mode":"closed","s":"","e":"","r":0},"speaking":{"mode":"closed","s":"","e":"","r":0}}</script>
 <div id="app"></div>
@@ -7725,16 +7746,17 @@ function routeSVG(sec){
   let dots = "";
   pts.forEach((p,i)=>{ const n=i+1; const isMock = (n===5||n===15);
     if(isMock) dots += '<circle cx="'+p[0]+'" cy="'+p[1]+'" r="9" fill="none" stroke="#F2C14E" stroke-width="2"/>';
-    if(n===cur) dots += '<circle cx="'+p[0]+'" cy="'+p[1]+'" r="8" fill="#F2C14E" stroke="#EAF6F2" stroke-width="3"/>';
+    if(n===cur) dots += '<circle class="cur-pulse" cx="'+p[0]+'" cy="'+p[1]+'" r="8"/><circle cx="'+p[0]+'" cy="'+p[1]+'" r="8" fill="#F2C14E" stroke="#EAF6F2" stroke-width="3"/>';
     else dots += '<circle cx="'+p[0]+'" cy="'+p[1]+'" r="'+(done(n)?4.5:3.5)+'" fill="#EAF6F2" fill-opacity="'+(done(n)?1:.4)+'"/>'; });
   const top = pts[16];
   const svg = '<svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="xMaxYMax slice" aria-hidden="true">'+
     '<g fill="none" stroke="var(--contour)" stroke-width="1.2"><path d="M-10 280 C 140 250 250 190 330 150 S 520 50 660 20"/><path d="M-10 300 C 160 270 280 215 360 180 S 540 80 660 55"/><path d="M-10 255 C 120 225 220 160 300 120 S 500 25 660 -10"/></g>'+
+    '<g aria-hidden="true"><ellipse class="cloud" cx="170" cy="70" rx="70" ry="13"/><ellipse class="cloud b" cx="420" cy="115" rx="90" ry="15"/><ellipse class="cloud" cx="560" cy="30" rx="55" ry="10"/></g>'+
     '<path d="M0 300 L150 205 L215 238 L330 120 L388 168 L470 48 L560 110 L640 70 L640 300 Z" fill="var(--summit)" opacity=".85"/>'+
     '<path d="M470 48 L486 72 L475 67 L462 76 Z M330 120 L344 141 L334 137 L322 145 Z" fill="#EAF6F2" fill-opacity=".85"/>'+
     '<path d="'+path+'" fill="none" stroke="#EAF6F2" stroke-opacity=".45" stroke-width="2" stroke-dasharray="3 6"/>'+
-    (litPath? '<path d="'+litPath+'" fill="none" stroke="#F2C14E" stroke-width="3" stroke-linecap="round"/>' : '')+dots+
-    '<path d="M'+top[0]+' '+(top[1]-2)+' V '+(top[1]-34)+' L '+(top[0]+24)+' '+(top[1]-25)+' L '+top[0]+' '+(top[1]-16)+'" fill="#F2C14E" stroke="#EAF6F2" stroke-width="1.5"/>'+
+    (litPath? '<path class="lit" d="'+litPath+'" fill="none" stroke="#F2C14E" stroke-width="3" stroke-linecap="round"/>' : '')+dots+
+    '<path class="flag" d="M'+top[0]+' '+(top[1]-2)+' V '+(top[1]-34)+' L '+(top[0]+24)+' '+(top[1]-25)+' L '+top[0]+' '+(top[1]-16)+'" fill="#F2C14E" stroke="#EAF6F2" stroke-width="1.5"/>'+
     '<text x="'+(top[0]-46)+'" y="'+(top[1]-40)+'" fill="#EAF6F2" font-family="Fraunces, Georgia, serif" font-size="15">Band 6</text></svg>';
   const box = h("div",{class:"route"}); box.innerHTML = svg; return box;
 }
@@ -7831,7 +7853,7 @@ function viewSection(){
   const pillEl = foot.querySelector(".pill");
   function refresh(){
     const reqs = dayReqs(sec, day); const n = reqs.filter(r=>r.ok).length; const all = n===reqs.length;
-    if(all && !(S.days[dk]||{}).done){ S.days[dk] = {done:true, at:new Date().toISOString()}; persist(); toast(next? "Day "+day.n+" complete. Day "+next.n+" opens tomorrow." : "Day "+day.n+" complete. You finished the "+s.title+" section!"); }
+    if(all && !(S.days[dk]||{}).done){ S.days[dk] = {done:true, at:new Date().toISOString()}; persist(); celebrate(); toast(next? "Day "+day.n+" complete. Day "+next.n+" opens tomorrow." : "Day "+day.n+" complete. You finished the "+s.title+" section!"); }
     const done = !!(S.days[dk]||{}).done;
     count.textContent = n+" / "+reqs.length; meter.style.width = pct(n,reqs.length)+"%";
     pillEl.textContent = done? "Completed" : (reqs.length-n)+" left"; pillEl.className = "pill "+(done?"ok":"plain");
@@ -8968,6 +8990,34 @@ function unlockTool(){
 }
 
 function siteFoot(){ return h("footer",{class:"site-foot"}, h("p",null,"TOEFL® and TOEFL iBT® are registered trademarks of ETS. StratSix is an independent course and is not endorsed or approved by ETS. All passages, listening scripts, tasks, model answers and scoring descriptions in StratSix are original material. Scores in StratSix are practice estimates, not official scores.")); }
+
+let lastMotion = null;
+const REDUCED = () => { try{ return window.matchMedia("(prefers-reduced-motion: reduce)").matches; }catch(e){ return false; } };
+function countUp(el){
+  const m = el.textContent.trim().match(/^(\d{1,3})(\s*\/\s*\d+)?(%)?$/); if(!m) return;
+  const end = +m[1]; if(!end) return; const tail = (m[2]||"")+(m[3]||""); const t0 = performance.now(), dur = 900;
+  const step = now => { const k = Math.min(1,(now-t0)/dur), e = 1-Math.pow(1-k,3); el.textContent = Math.round(end*e)+tail; if(k<1) requestAnimationFrame(step); else el.textContent = end+tail; };
+  el.textContent = "0"+tail; requestAnimationFrame(step);
+}
+function motion(){
+  const key = VIEW.name||"home";
+  if(lastMotion===key) return; lastMotion = key;
+  if(REDUCED()) return;
+  const main = root.querySelector("main"); if(!main) return;
+  main.classList.add("mo-on");
+  let i = 0;
+  main.querySelectorAll(".hero > *, .sec-card, .panel, .sections > *, .bars, .stat").forEach(el=>{ el.classList.add("mo-i"); el.style.setProperty("--i", Math.min(i++,12)); });
+  main.querySelectorAll(".route path.lit").forEach(pa=>{ try{ pa.style.setProperty("--len", Math.ceil(pa.getTotalLength())+2); }catch(e){} });
+  main.querySelectorAll(".kv b, .bar-row .v, .sections .mono.small, .stat .v, .sec-card .kv b").forEach(el=>{ if(!el.children.length) countUp(el); });
+}
+function celebrate(){
+  if(REDUCED()) return;
+  const cols = ["#F2C14E","#E3AE2B","#0F766E","#7FD6C8","#EAF6F2"];
+  for(let k=0;k<26;k++){ const c = document.createElement("div"); c.className = "confetti"; c.setAttribute("aria-hidden","true");
+    c.style.left = (8+Math.random()*84)+"vw"; c.style.background = cols[k%cols.length];
+    c.style.setProperty("--dx", (Math.random()*160-80)+"px"); c.style.setProperty("--rot", (Math.random()*720-360)+"deg"); c.style.setProperty("--t", (1.5+Math.random()*1.1)+"s");
+    c.style.animationDelay = (Math.random()*.35)+"s"; document.body.append(c); setTimeout(()=>c.remove(), 3200); }
+}
 function render(){
   onSaveHook = null;
   root.innerHTML="";
@@ -8986,6 +9036,7 @@ function render(){
   else if(VIEW.name==="simreport") v = viewSimReport();
   else v = viewHome();
   root.append(v, siteFoot());
+  if(VIEW.name==="progress" || root.querySelector(".hero-main.summit")) motion(); else lastMotion = null;
   const cur = root.querySelector('.nav [aria-current="page"]'); if(cur && cur.scrollIntoView){ try{ cur.scrollIntoView({block:"nearest",inline:"center"}); }catch(e){} }
 }
 const tok = (location.hash||"").slice(1);
