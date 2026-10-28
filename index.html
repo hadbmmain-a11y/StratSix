@@ -559,6 +559,12 @@ audio{width:100%;max-width:420px}
 .mo-on .route .lit{stroke-dasharray:var(--len);animation:moDraw 1.6s .3s cubic-bezier(.4,0,.2,1) both}
 .confetti{position:fixed;top:0;z-index:90;width:9px;height:14px;border-radius:2px;pointer-events:none;animation:moFall var(--t,1.9s) cubic-bezier(.3,.6,.4,1) forwards}
 @media (prefers-reduced-motion:reduce){.mo-on .mo-i,.mo-on .meter > i,.mo-on .route .lit{animation:none}.route .cur-pulse,.route .cloud,.route .flag{animation:none}.confetti{display:none}.sec-card,.panel{transition:none}}
+
+.hard-card{border:1px solid var(--line);border-left:4px solid var(--red);background:var(--paper);border-radius:var(--r);padding:14px 16px}
+.hard-card.ok{border-left-color:var(--ok);background:var(--ok-soft)}
+.hard-card.bad{border-left-color:var(--err);background:var(--err-soft)}
+.hard-card h3{margin:2px 0 6px}
+.stage-head .pill.hard{background:var(--red-soft);color:var(--red-ink)}
 </style>
 <script type="application/json" id="bs-access">{"reading":{"mode":"dates","s":"2026-10-05","e":"2026-10-27","r":9},"listening":{"mode":"closed","s":"","e":"","r":2},"writing":{"mode":"closed","s":"","e":"","r":0},"speaking":{"mode":"closed","s":"","e":"","r":0}}</script>
 <div id="app"></div>
@@ -5768,6 +5774,163 @@ X(17, [
 })();
 
 /* ================= Narrated tutorials: screen builders ================= */
+
+/* ---------------- EXTRA HARD SETS (Listening): final stage of a day, 90% to pass, fresh version on every retry ---------------- */
+(function(){
+/* Day 2 Extra Hard Set, version A: 60 Listen and Choose a Response items.
+   [speaker, line, CORRECT, wrong1, wrong2, wrong3, why] — options are shuffled when shown. */
+const L2A = [
+/* ---- wh-questions ---- */
+["M","When does the extended library schedule start?","Once midterms begin, I think.","The schedule is posted at the front desk.","It stays open until ten at night.","It has been that way since 2019.","A when-question needs a time. “Once midterms begin” gives one. The others repeat schedule or open, or use “since”, which points to the past."],
+["W","Where did you leave the lab keys?","I thought Dana had them.","They’re the brass ones with a tag.","I left around five o’clock.","The lab is on the third floor.","Indirect place answer: the speaker passes the question to Dana. “Left around five” answers when, not where."],
+["M","Who’s covering the front desk this afternoon?","Nobody has signed up yet.","The desk closes at four.","I covered it last week.","It’s right next to the entrance."," “Nobody has signed up” answers who. The others repeat desk or covered without naming anyone."],
+["W","Why did the shuttle skip our stop?","There was construction on that block.","It runs every twenty minutes.","I skipped lunch to catch it.","Yes, it stops at the stadium.","A why-question needs a reason. Construction explains it. “Skipped” in the third option is only a repeated word."],
+["M","How long will the repairs take?","They said maybe through Friday.","It will cost about two thousand dollars.","I repaired the same pipe last year.","Every few years, from what I hear.","How long asks about duration. “Through Friday” gives one. Cost and frequency answer other questions."],
+["W","How often does the choir rehearse?","Twice a week, usually in the evening.","For about an hour and a half.","Since I joined last fall.","Mostly classical pieces.","How often needs a frequency. “Twice a week” is one. “An hour and a half” is a duration."],
+["M","Which section of the course are you in?","The one that meets on Tuesdays.","It’s in the science building.","I’m a biology major.","The sections start next week.","Which asks for a choice. Identifying the section by its meeting day answers it. Building and major answer where and what."],
+["W","How much notice do I need to give for a room change?","At least two days, according to the form.","It changed again last week.","The room holds about thirty people.","Yes, you can change it online.","How much notice needs an amount of time. Room size and “changed” are echoes."],
+["M","What time did the review session get moved to?","Now it’s at four instead of three.","It was extremely helpful.","In the main auditorium.","I’ll review the chapters tonight.","The answer must be a time. “Four instead of three” gives the new time and the old one."],
+["W","Where can I get my student ID reissued?","The security office handles that.","I got my first one in September.","It costs about ten dollars.","It expires at the end of June.","A where-question needs a place or office. The others are about when, how much and expiry."],
+/* ---- yes / no questions ---- */
+["M","Have you submitted the lab report yet?","I’m still waiting for my partner’s data.","I reported it to the lab manager.","The lab opens at nine tomorrow.","Yes, the lab is open.","An indirect no: the report is not ready, and the reason is given. “Reported” and “lab is open” only repeat words."],
+["W","Is this seat taken?","Go ahead, I was just leaving.","Yes, I’m taking the bus.","These seats are very comfortable.","I took it last semester.","“Go ahead” means it is free. “Yes, I’m taking” is a trap: it repeats taken as taking."],
+["M","Did the professor extend the deadline?","Only for students with a doctor’s note.","He extended his office hours.","The deadline is longer this year.","Next week’s reading is long.","A partial yes: the extension exists but has a condition. “Extended his office hours” repeats the word without answering."],
+["W","Do you know if the bookstore takes credit cards?","I always pay cash there, just in case.","Yes, I read all the books.","The bookstore is next to the gym.","Cards are on sale this week.","The speaker avoids a direct answer but implies it is not safe to count on cards. The other options repeat words."],
+["M","Were you able to reach your advisor?","Her voicemail was full, so I emailed her.","Her advice was really useful.","I reached the top shelf.","She advised me last spring.","Implied no: the call failed, so an email was sent. “Advice” and “advised” are sound-alikes of advisor."],
+["W","Is the cafeteria still serving lunch?","They stop at two, so you have time.","Lunch was great yesterday.","Yes, I’ll serve it.","The portion sizes are huge.","The answer implies yes and adds helpful information. “I’ll serve” repeats the word with a different meaning."],
+["M","Haven’t you registered for next semester yet?","Not until my advisor signs off.","Yes, I have a very full schedule.","The semester is shorter this year.","The registrar is on the left.","A negative question. “Not until…” confirms the student has not registered and gives the reason. “Yes” here does not fit."],
+["W","Do you think this is the right building?","Check the sign by the entrance.","Yes, I could build it.","It’s a very tall building.","I got it right on the first try.","Indirect answer that points to a way to check. “Build” and “right” are repeated words."],
+/* ---- choice questions ---- */
+["M","Would you rather meet before class or after it?","Before works better; I have a lab at noon.","The class meets on Mondays.","I’d rather not discuss it.","After the semester ends.","A choice question needs one of the options with a reason. “Before” is chosen. The others repeat class or rather."],
+["W","Should we take the bus or walk to the stadium?","It’s pouring, so let’s take the bus.","The stadium holds fifty thousand people.","We walked there yesterday.","I need new walking shoes.","The reason (rain) leads to the bus. “Walked yesterday” is the wrong tense for the decision."],
+["M","Are you taking Chemistry 101 or the advanced section?","Whichever fits my schedule.","I took chemistry in high school.","The advanced lab is on the third floor.","Yes, I’m taking notes.","“Whichever” is an accepted answer to an either/or question. The others repeat chemistry or are off topic."],
+["W","Do you prefer the morning shift or the evening one?","Mornings, since I have classes at night.","I work at the library.","The evening shift pays more.","Yes, I prefer it.","The answer picks mornings and explains why. “Evening shift pays more” talks about the other option without choosing."],
+["M","Is the meeting in room 12 or room 21?","The email says 21.","I’ll meet you at noon.","Twelve people are coming.","The room is fairly small.","The answer chooses room 21 through the email. “Twelve” is a number echo."],
+["W","Did you take notes by hand or on your laptop?","My battery died, so by hand.","I noticed it was late.","Yes, I bought a new laptop.","The notes are due on Friday.","Chooses “by hand” and explains. “Noticed” sounds like notes."],
+["M","Would you like tea or coffee?","Tea, please. I’ve had enough caffeine today.","I’d like to go to the coffee shop.","The coffee machine is broken.","Yes, I like both.","Chooses tea and gives a reason. The others repeat coffee or answer with yes."],
+["W","Are you majoring in economics or in finance?","I haven’t declared a major yet.","The economy is improving.","The finance office closes at five.","Yes, it’s a major issue.","Neither: the speaker has not chosen. “Economy” and “major issue” repeat words."],
+/* ---- tag and negative questions ---- */
+["M","You turned in the proposal, didn’t you?","I did, but I forgot to attach the budget.","Proposals are due at noon.","No, you didn’t.","I proposed something different.","A tag question seeks confirmation. “I did, but…” confirms and adds a problem."],
+["W","The seminar isn’t mandatory, is it?","Attendance counts toward your grade.","The seminar was fun.","Yes, I mandated it.","Seminar rooms are upstairs.","An indirect “yes, in practice”: attendance affects the grade. The others repeat words."],
+["M","This is the line for financial aid, right?","Actually, that one’s around the corner.","I need to line up my paperwork.","Yes, the financial report is due.","Aid was approved in June.","Corrects the speaker’s assumption. “Line up” repeats the word differently."],
+["W","Wasn’t the exam supposed to be today?","They postponed it until next Monday.","Today is Friday.","Yes, I supposed so.","I’m exhausted today.","Gives the actual information: the exam was moved. “Today is Friday” does not answer."],
+["M","You haven’t seen my umbrella, have you?","Isn’t that it by the door?","Yes, it’s raining hard.","I saw the weather report.","Umbrellas are on the third floor.","A helpful answer that points to the umbrella. “Yes” does not fit a negative tag question here."],
+["W","We can’t print in the lab anymore, can we?","Not since they removed the printers.","The lab closes at nine.","We can, yes, if we ask.","The paper is on sale.","Confirms: no printing. Gives the reason. “We can, yes” contradicts the situation."],
+/* ---- requests, offers, invitations ---- */
+["M","Would you mind watching my bag while I grab a coffee?","Not at all. Take your time.","I watched it last night.","I don’t drink much coffee.","The bag is black.","“Would you mind” is answered with “Not at all” for agreement. The others repeat watching or bag."],
+["W","Could I borrow your notes from Monday?","Sure, as long as I get them back by Thursday.","I took a long walk on Monday.","They are lecture notes.","Notes are very important.","Accepts the request with a condition. “Monday” is an echo."],
+["M","I can give you a ride to the airport if you want.","That would save me a lot of trouble.","The airport is far from here.","I rode there last year.","Yes, they were late.","An offer is accepted with thanks. The other options repeat words or use the wrong tense."],
+["W","How about grabbing dinner after the talk?","I’d love to, but I have a deadline tonight.","The talk was fascinating.","Talks last about an hour.","Yes, I talked to her.","A polite refusal with a reason to an invitation. “Fascinating” does not respond to the invitation."],
+["M","Would you like me to reserve a study room for us?","Thanks, but I already booked one.","The rooms are on the left.","I’d like to study history.","Yes, we reserve it.","Declines politely because the task is done. “Study” and “reserve” are echoes."],
+["W","Why don’t you join our study group on Wednesdays?","Is it open to students from other majors?","Wednesday is my favorite day.","Groups are hard to organize.","I joined a club last year.","A natural reply to an invitation is a question about conditions. “Favorite day” does not accept or decline."],
+["M","Could you tell me how to get to the registrar’s office?","Take the stairs by the fountain; it’s the first door.","Yes, I can register you.","It’s open until four.","The registrar is very friendly.","Gives directions. “Register” and “open until four” do not."],
+["W","Let me know if you need help with the project.","Actually, could you look over my outline?","The project is due Friday.","I know how to let it go.","Help is on the way.","Accepts the offer with a specific request. Others repeat words."],
+/* ---- suggestions and opinions ---- */
+["M","What do you think about moving our meeting to Friday?","I’d rather not; I’m out of town that day.","Friday is the fifth day of the week.","Meetings are tiring.","We moved apartments last year.","Gives an opinion and a reason. “Moving” is repeated with another meaning in the last option."],
+["W","Maybe we should split the presentation into two parts.","That would leave time for questions.","The presentations are on Tuesday.","I split my notes yesterday.","Some parts are missing.","Agrees with the idea and adds a benefit. “Split” and “parts” are echoes."],
+["M","Do you think the final exam will cover chapter nine?","The syllabus lists it under week twelve.","I finally finished chapter nine.","Nine students are failing.","The cover of the book is blue.","An indirect answer: check the syllabus. Others repeat nine or cover."],
+["W","What’s your opinion of the new campus café?","The coffee’s good, but it’s always crowded.","I opened it yesterday.","It’s on the corner of Main Street.","A café is a small restaurant.","The question asks for an opinion. Good and bad points answer it. Location and definition do not."],
+["M","Isn’t it too early to start the report?","Not if we want time to revise.","The early bus leaves at six.","Yes, the report is red.","I started early last time.","A negative question. “Not if…” disagrees and gives a reason."],
+["W","Should I take the evening section or the morning one?","If you work days, evenings are easier.","I have a morning class too.","Sections are listed online.","Evening is when it gets dark.","Gives advice that depends on the situation. Others repeat words."],
+["M","What if we ask the professor for an extension?","He’s usually fine with it if you ask early.","I asked him a question yesterday.","Extensions are on the second floor.","The professor has a new office.","Answers the suggestion with practical advice. Others repeat ask or professor."],
+["W","It might be a good idea to back up your files.","I’ve been meaning to, ever since the crash.","The files are in the cabinet.","Yes, I like the back row.","My back hurts.","Agrees and explains why. “Back” is repeated with different meanings."],
+/* ---- statements that need a response ---- */
+["M","I think I left my phone in the lecture hall.","You could check with the front office.","The lecture was really interesting.","Phones are not allowed in the exam.","I called him an hour ago.","A natural response gives advice. Others repeat lecture or phone."],
+["W","The printer in the library is out of order again.","There’s another one in the student center.","I ordered a new notebook.","The library is closed on Sundays.","Again, please.","Offers a solution. Others repeat order or again."],
+["M","I’m completely lost in organic chemistry.","The tutoring center has free sessions on Mondays.","I lost my keys in the lab.","I organized the whole party.","Chemistry is on the second floor.","Responds to a problem with help. Others repeat lost or organic."],
+["W","I’m thinking about dropping the photography class.","Have you talked to your advisor first?","I dropped my camera yesterday.","Photography is very expensive.","The class has a nice view.","A natural reply asks a follow-up question. “Dropped” is repeated with a different meaning."],
+["M","Our group presentation went better than I expected.","Yes, the audience seemed really engaged.","I expected it to be warmer.","We presented it to the group.","Expectations are rising everywhere.","Agrees and adds a detail. Others repeat words."],
+["W","I can’t believe how fast this semester is flying by.","Tell me about it. I still haven’t started my thesis.","Flying is expensive these days.","Yes, I believe it was fast.","The semester starts in August.","“Tell me about it” means “I agree”, and the speaker adds a related detail."],
+/* ---- indirect and implied meaning ---- */
+["M","Who doesn’t want a free ticket to the concert?","Count me in.","The tickets are on the second floor.","I didn’t see the concert.","The concert is free.","A rhetorical question meaning everybody wants one. “Count me in” accepts the offer."],
+["W","Do you think I have all day to wait?","Sorry, I’ll be there in two minutes.","I think it’s about noon.","Yes, all of them.","A day has twenty-four hours.","An impatient comment, not a real question. The reply is an apology."],
+["M","Could this café be any more crowded?","I know. We should have come earlier.","Yes, it could be crowded.","There are more than ten tables.","The crowd was at the stadium.","Rhetorical. The reply agrees and adds a regret."],
+["W","Isn’t it a bit chilly to be eating outside?","We have blankets, and the heaters are on.","Yes, the chili is great.","The outside is on the left.","I ate indoors at noon.","Answers the worry with a solution. “Chili” is a sound-alike of chilly."],
+["M","Is that really the best you can do on short notice?","Give me an hour and I’ll improve it.","The notice is on the board.","Yes, a short one.","My notes are short.","A complaint. The reply offers to fix it. Others repeat words."],
+["W","You’re not seriously going to wear that to the interview, are you?","It’s the only clean suit I have left.","No, I’m interviewing on Tuesday.","Serious people wear suits.","I’ll wear it to the lecture.","Defends the choice with a reason. “No” does not fit the meaning."]
+];
+
+/* Day 2 Extra Hard Set, version B: 60 Listen and Choose a Response items. */
+const L2B = [
+/* ---- wh-questions ---- */
+["W","When is the scholarship application due?","The deadline is the last day of the month.","The application is online.","I applied for one last year.","It’s worth about four thousand dollars.","A when-question needs a date or time. “The last day of the month” gives one. The others repeat application or scholarship ideas."],
+["M","Where are we supposed to hand in the final drafts?","The instructions say to upload them online.","We’ll hand them out at noon.","The drafts were really long.","Yes, they’re all finished.","The answer gives the place (online) indirectly. “Hand” is repeated in the first wrong option with a different meaning."],
+["W","Who’s presenting the research findings on Thursday?","I heard the whole team will share it.","They were published in June.","The findings were surprising.","On Thursday afternoon, I think.","Who needs a person or group. “The whole team” is one. The last option answers when."],
+["M","Why was the lecture cancelled this morning?","The professor’s flight got delayed.","It was at nine o’clock.","The lecture hall was full.","Yes, it was a long lecture.","Why needs a reason. The delayed flight is the reason. The other options repeat lecture."],
+["W","How many credits do I need to graduate?","It depends on your major; check the handbook.","I graduated two years ago.","About ten dollars each.","Credit cards are accepted.","An indirect answer that points to a source. “Graduated” and “credit” are traps."],
+["M","How did the field trip go?","Better than I expected, apart from the rain.","We went by bus.","It’s about two hours away.","The trip is on Friday.","How asks for an evaluation. “Better than I expected” is one. The others answer how (transport), how far, and when."],
+["W","Which of the two labs has better equipment?","The newer one in the engineering building.","Equipment is checked every spring.","I have lab on Thursdays.","Both of them open at nine.","Which needs one choice. “The newer one” picks. Others do not choose."],
+["M","What’s the easiest way to reach the north campus?","The shuttle is faster than walking.","It’s the north entrance.","Yes, it’s easy to find.","The campus is very large.","Gives a method. Others repeat easy, north or campus."],
+["W","How long have you worked at the bookstore?","Since the beginning of my second year.","For about twelve dollars an hour.","The bookstore closes at nine.","I’ll work there until June.","How long can be answered with “since…”. The last option uses the future."],
+["M","Where did Professor Alvarez put the graded quizzes?","I think they’re in the box outside her office.","She graded them last night.","The quiz was pretty hard.","Alvarez is a Spanish name.","A place answer. Others repeat graded or quiz."],
+/* ---- yes / no ---- */
+["W","Is the gym open on holidays?","It’s only open until noon on those days.","I go every day.","The gym is on the second floor.","Holidays are my favorite.","Partial yes with a limit. Others repeat gym or holidays."],
+["M","Did you get a chance to look at my résumé?","I did. The second page needs a few changes.","I resumed my studies in June.","The chance is very small.","Your job is great.","Yes, with a comment. “Resumed” sounds like résumé."],
+["W","Are you going to the career fair on Friday?","I’m still not sure my schedule allows it.","The fair has food.","Yes, it’s fair to say that.","Friday is the last day.","Uncertain answer. “Fair” is used with a different meaning."],
+["M","Has the package from the publisher arrived?","Nothing has come through the mailroom today.","I packed all my bags.","The publisher is in Boston.","Yes, I’m arriving at three.","Indirect no. “Packed” and “arriving” repeat sounds and words."],
+["W","Do you have time to talk about my grade?","Come by during my office hours tomorrow.","The grade is a B.","I’m always on time.","The talk was on Monday.","Offers a different time. “Time” is repeated."],
+["M","Can you make it to the group meeting tonight?","Only if it ends before eight.","The group has five members.","I made dinner for everyone.","Tonight is the last night.","A conditional yes. Others repeat group or make."],
+["W","Isn’t this the bus that goes downtown?","The express does, but this one stops at the hospital.","Yes, I live down the street.","The buses are all full.","It was late again.","Corrects the speaker. Others repeat bus or downtown."],
+["M","Do you mind if I open the window?","Not at all, it’s a little warm in here.","I opened it yesterday.","The window is broken.","Yes, I do mind the noise.","“Not at all” means no problem. The third option is wrong for the meaning of the question."],
+/* ---- choice ---- */
+["W","Do you want to study at the library or at my place?","The library has better Wi-Fi.","I’d love to see your place.","I studied there yesterday.","Yes, I do want to study.","Chooses the library with a reason. “I’d love to see your place” does not answer either/or."],
+["M","Are you going to submit the paper today or wait until Monday?","I want one more read-through first.","The paper is about energy.","Monday is a holiday.","I submitted it already.","The speaker implies waiting. Others repeat words."],
+["W","Do you prefer working alone or in a group?","It depends on how complicated the task is.","I work at the bookstore.","The group is meeting at noon.","Alone is a lonely word.","A conditional answer to an either/or question."],
+["M","Would you take the early flight or the afternoon one?","Whichever is cheaper.","The flight takes two hours.","I took one last spring.","Early mornings are cold.","“Whichever” answers an either/or. Others repeat flight or early."],
+["W","Is the report due on the 14th or the 15th?","I’m pretty sure it’s the 15th.","I’ll write fourteen pages.","The report is on climate.","Fifteen of us are in the class.","Picks the 15th. “Fourteen pages” and “fifteen of us” are number echoes."],
+["M","Did you come by car or by bus?","My roommate gave me a ride.","The bus was late again.","I came yesterday.","Yes, I came on time.","Neither of the two: a third way. The second option repeats bus but does not tell how the speaker came."],
+["W","Do you want the red folder or the blue one?","Either is fine.","I want the file today.","The folder has some notes.","I read the blue book.","“Either is fine” answers either/or. Others repeat folder or blue."],
+["M","Is your class on Monday and Wednesday or Tuesday and Thursday?","Monday and Wednesday, right after lunch.","I have class every day.","It’s on the third floor.","Wednesday is the middle of the week.","Chooses and adds detail. Others repeat days."],
+/* ---- tag and negative ---- */
+["W","You’re taking the night class, aren’t you?","I was, but it’s full now.","Night is dark, isn’t it?","No, you aren’t.","The class has a test.","A tag question. “I was, but…” answers and adds new information."],
+["M","The deadline hasn’t changed, has it?","It has. The new date is the twentieth.","Yes, I have changed my mind.","The dead end is on the left.","Deadlines are stressful.","Answers the question and gives the new date. “Dead end” is a sound-alike."],
+["W","That was the last bus, wasn’t it?","I think there’s one more at midnight.","Yes, it was a last-minute trip.","The bus is on the left.","I lasted for an hour.","Corrects the speaker. “Last” is repeated in different meanings."],
+["M","You don’t need the textbook for that class, do you?","The professor said it’s required for the exam.","I don’t have it.","Yes, the book is very expensive.","Classes start at eight.","Corrects the speaker: the textbook is needed."],
+["W","This restaurant takes reservations, doesn’t it?","Only for groups of six or more.","I reserve it every Friday.","The restaurant is closed on Monday.","Yes, the food is great.","A conditional answer. Others do not answer."],
+["M","We aren’t supposed to bring food in here, are we?","There’s a sign on the door that says so.","Food is delicious.","Yes, I brought some.","We are in the library.","Confirms indirectly with evidence. “I brought some” is a trap."],
+/* ---- requests, offers, invitations ---- */
+["W","Would it be possible to reschedule my appointment?","Sure. How does Thursday at ten sound?","The appointment was great.","Scheduling is difficult.","Yes, I made it.","Accepts and proposes a new time. Others repeat words."],
+["M","Could you give me a hand moving these boxes?","Let me just finish this email first.","I handed them in already.","The boxes are heavy.","Yes, I moved last year.","Agrees but asks to wait. “Hand” and “moved” are traps."],
+["W","Do you want me to save you a seat?","That would be great, thanks.","I saved some money.","The seat is broken.","Yes, I want to be on time.","An offer accepted. “Saved” is repeated."],
+["M","Why don’t we start with the easier questions?","Good idea. We can come back to the hard ones.","I started yesterday.","The questions are hard.","The questions are in the packet.","Agrees with the suggestion and adds logic. The other options repeat start or question."],
+["W","Can I get you anything from the cafeteria?","Just a bottle of water, please.","The cafeteria is crowded.","I got here early.","Yes, I can get it.","Answers an offer with a specific request."],
+["M","I was wondering if you could proofread my essay.","I’d be happy to. When do you need it back?","Yes, I wonder, too.","The essay is on global trade.","I read it at the library.","Accepts and asks a useful follow-up. “Wonder” is repeated."],
+["W","Would you care for some more soup?","I’m full, but it was delicious.","Yes, I care about soup.","The soup is on the stove.","More money is helpful.","Declines politely. “Care” is repeated with a different meaning."],
+["M","Why don’t you stop by after work?","I might. It depends on how late I finish.","I stopped yesterday.","Work is hard.","Yes, I stop here.","Uncertain acceptance of an invitation."],
+/* ---- suggestions and opinions ---- */
+["W","What did you think of the guest speaker?","She was clear, but I wanted more examples.","I speak English.","The guest list is long.","At seven o’clock.","Gives an opinion with both good and bad points."],
+["M","Do you think we should email the professor first?","I’d wait until after we check the syllabus.","The professor is on leave.","First place goes to Tim.","Emails are quick.","Gives an opinion about what to do first."],
+["W","How do you like your new apartment?","The location is perfect, but it’s noisy.","I like apple juice.","I rent it from a friend.","It’s on Main Street.","How do you like… asks for an opinion. “Location perfect, noisy” is one."],
+["M","Wouldn’t it be better to sit in the front?","I can’t see the screen from there, though.","Yes, I’d better go.","The front door is locked.","Better late than never.","Disagrees with a reason. Others repeat better or front."],
+["W","I think we should hire a tutor.","That’s probably worth the money.","I hired him last week.","The tutor lives far away.","I think you’re tired.","Agrees. Others repeat words."],
+["M","What would you do if you missed the deadline?","I’d email the instructor right away.","The deadline is Friday.","I missed the bus.","What if you did?","Answers a hypothetical with a plan."],
+["W","I’m not sure the plan will work.","What part worries you the most?","The plan is in the folder.","It works every day.","Yes, I’m sure.","A natural reply to doubt is a question about the problem."],
+["M","Don’t you think the lab was too hot today?","It was. I almost fell asleep.","The lab is on the second floor.","I hot-glued it.","Yes, the lab was today.","Agrees and adds a detail."],
+/* ---- statements ---- */
+["W","I forgot my charger at home.","You can borrow mine if it fits.","I’m glad you’re home.","The home page is down.","I charged it last night.","Offers help. Others repeat home or charge."],
+["M","The parking lot is completely full again.","Let’s try the garage across the street.","I parked there yesterday.","Parking is expensive.","The lot is on the left.","Suggests a solution."],
+["W","I got a B on my chemistry midterm.","That’s better than last time, isn’t it?","I’m taking chemistry too.","The midterm is hard.","Yes, a bee flew in.","Reacts to the news with a follow-up. “Bee” is a sound-alike."],
+["M","I’ve been waiting for the bus for twenty minutes.","They’re usually late on rainy days.","I wait every day.","The bus is blue.","I’ll take the next one.","Explains the delay. Others repeat wait or bus."],
+["W","The cafeteria changed its hours again.","Do you know when it closes now?","Yes, I cheered.","The hours are long.","Again, please.","A follow-up question. “Changed” and “cheered” are not related."],
+["M","I’m thinking of getting a part-time job.","Won’t that make it harder to study?","I thought you got one.","Part of the job is fun.","Time is money.","A natural concerned question."],
+/* ---- indirect and implied ---- */
+["W","Is there any chance you could turn that music down?","Sorry, I didn’t realize it was so loud.","Yes, there’s a good chance.","The music is on the radio.","I chanced upon it.","An indirect request. The reply apologizes."],
+["M","Do you have any idea how long this line is?","It goes all the way to the door, I’m afraid.","I have a few ideas.","This is a long book.","Yes, I have a line.","Answers the literal question about length."],
+["W","Is it just me, or is it freezing in here?","It isn’t just you. I’ll ask them to adjust the heat.","Just a minute, please.","I’m free this afternoon.","Yes, it’s just me.","Agrees and offers help."],
+["M","Has anyone seen the instructions for this machine?","They were on the table a minute ago.","I instructed him.","It’s a new machine.","Anyone can see.","Answers the question indirectly."],
+["W","You’ve been working on that for hours. Don’t you ever take a break?","I will, as soon as I finish this section.","Yes, I broke it yesterday.","Hours are long.","I work for the school.","Responds to the concern. “Broke” is a trap."],
+["M","Could you be any slower?","Sorry, I’ll pick up the pace.","Yes, I could be much slower.","The pace is fine.","I could not agree more.","Rhetorical: the speaker is annoyed. The reply apologizes."]
+];
+
+  const conv = arr => arr.map(r=>({line:r[0]+": "+r[1], o:[r[2],r[3],r[4],r[5]], a:0, why:r[6].trim()}));
+  function addHard(n, versions, mins){
+    const d = BS.sections.listening.days.find(x=>x.n===n); if(!d) return;
+    const variants = versions.map(v=>[{t:"response", items:conv(v)}]);
+    d.stages.push({kind:"hard", title:"Extra Hard Set", mins, blocks:[{t:"hardset", pass:0.9, mins, count:versions[0].length, variants}]});
+  }
+  addHard(2, [L2A, L2B], 50);
+})();
+
 BS.tutorials = {};
 BS.TV = (function(){
   const L = "ABCD";
@@ -6724,7 +6887,7 @@ const TT = {
   "W-BAS":"Build a Sentence","W-EM":"Write an Email","W-AD":"Academic Discussion",
   "S-LR":"Listen and Repeat","S-INT":"Take an Interview","L-DICT":"Dictation","X-Q":"Strategy check"
 };
-const STAGE = {tutorial:"Video tutorial",learn:"Strategy",model:"Worked example",practice:"Guided practice",apply:"Timed task",check:"Exit check",habit:"Daily exposure",reflect:"Reflection",tool:"Toolkit",mock:"Mock test"};
+const STAGE = {tutorial:"Video tutorial",learn:"Strategy",model:"Worked example",practice:"Guided practice",apply:"Timed task",check:"Exit check",habit:"Daily exposure",reflect:"Reflection",tool:"Toolkit",mock:"Mock test",hard:"Extra Hard Set"};
 
 /* ---------------- state ---------------- */
 const KEY = "stratsix.v1";
@@ -7017,7 +7180,7 @@ R.listen = (b, ctx) => {
   const pl = player(b.lines, {label: b.setting || "Listen", sub: null, once: ctx.mock, onDone:()=>{ qwrap.hidden=false; showQ.hidden=true; }});
   const res = h("div",{class:"result",hidden:true});
   const tbtn = h("button",{class:"btn sm",hidden:true,onclick:()=>{ script.hidden=!script.hidden; tbtn.textContent = script.hidden? "Show transcript":"Hide transcript"; }},"Show transcript");
-  const api = { grade(){ qwrap.hidden=false; showQ.hidden=true; const r=list.grade(); res.hidden=false; res.innerHTML='<span class="score-chip">'+r.c+" / "+r.t+"</span>"; tbtn.hidden=false; btn && (btn.hidden=true); recordResult(ctx.key,r.c,r.t,tt); return r; } };
+  const api = { missing(){ return list.missing(); }, grade(){ qwrap.hidden=false; showQ.hidden=true; const r=list.grade(); res.hidden=false; res.innerHTML='<span class="score-chip">'+r.c+" / "+r.t+"</span>"; tbtn.hidden=false; btn && (btn.hidden=true); recordResult(ctx.key,r.c,r.t,tt); return r; } };
   const btn = ctx.mock ? null : checkBtn("Check answers", guard(()=>list.missing(), ()=>api.grade()));
   ctx.reg && ctx.reg(api);
   return h("div",{class:"item"}, h("div",{class:"item-top"}, h("span",{class:"pill"}, TT[tt])), pl, TTS.ok? showQ : (qwrap.hidden=false, null), qwrap, h("div",{class:"row"}, btn, tbtn, res), script);
@@ -7037,7 +7200,7 @@ R.response = (b, ctx) => {
     n._opts=opts; n._why=why; n._line=line; return n;
   });
   const res = h("div",{class:"result",hidden:true});
-  const api = { grade(){ locked=true; let c=0; items.forEach((it,i)=>{ const n=nodes[i]; const ord=ords[i]; n._opts.forEach((o,oi)=>{ const src=ord[oi]; o.disabled=true; o.classList.remove("sel"); if(src===it.a) o.classList.add("right"); else if(src===sel[i]) o.classList.add("wrong"); }); if(sel[i]===it.a) c++; n._line.hidden=false; n._why.hidden=false; n._why.innerHTML=(sel[i]===it.a?"<b>Correct.</b> ":"<b>Answer: "+LET[ord.indexOf(it.a)]+".</b> ")+remapWhy(it.why, ord); }); res.hidden=false; res.innerHTML='<span class="score-chip">'+c+" / "+items.length+"</span>"; btn&&(btn.hidden=true); recordResult(ctx.key,c,items.length,"L-CR"); return {c,t:items.length}; } };
+  const api = { missing(){ return sel.filter(x=>x==null).length; }, grade(){ locked=true; let c=0; items.forEach((it,i)=>{ const n=nodes[i]; const ord=ords[i]; n._opts.forEach((o,oi)=>{ const src=ord[oi]; o.disabled=true; o.classList.remove("sel"); if(src===it.a) o.classList.add("right"); else if(src===sel[i]) o.classList.add("wrong"); }); if(sel[i]===it.a) c++; n._line.hidden=false; n._why.hidden=false; n._why.innerHTML=(sel[i]===it.a?"<b>Correct.</b> ":"<b>Answer: "+LET[ord.indexOf(it.a)]+".</b> ")+remapWhy(it.why, ord); }); res.hidden=false; res.innerHTML='<span class="score-chip">'+c+" / "+items.length+"</span>"; btn&&(btn.hidden=true); recordResult(ctx.key,c,items.length,"L-CR"); return {c,t:items.length}; } };
   const btn = ctx.mock ? null : checkBtn("Check answers", guard(()=>sel.filter(x=>x==null).length, ()=>api.grade()));
   ctx.reg && ctx.reg(api);
   return h("div",{class:"stack"}, ...nodes, h("div",{class:"row"}, btn, res));
@@ -7621,6 +7784,50 @@ R.habit = (b, ctx) => { const key=ctx.key; const st = S.habits[key]||[]; return 
 R.reflect = (b, ctx) => { const key=ctx.key; return h("div",{class:"stack"}, ...b.prompts.map((p,i)=>{ const ta = h("textarea",{class:"textarea",style:"min-height:80px",id:"rf-"+key+"-"+i,"aria-label":p}); ta.value = (S.reflect[key]||[])[i]||""; ta.addEventListener("input",()=>{ const a = S.reflect[key]||[]; a[i]=ta.value; S.reflect[key]=a; save(); }); return h("div",{class:"stack",style:"gap:6px"}, h("label",{for:"rf-"+key+"-"+i,class:"q",html:p}), ta); })); };
 
 /* Adaptive mock: Module 1 routes to a harder or easier Module 2 */
+
+/* Extra Hard Set: a longer, harder set at the end of a day. Needs HARD_PASS (90%) to finish the day. A new version loads on every retry. */
+const HARD_PASS = 0.9;
+R.hardset = (b, ctx) => {
+  const key = ctx.key; S.hard = S.hard || {};
+  const st = () => (S.hard[key] = S.hard[key] || {attempt:0, hist:[]});
+  const wrap = h("div",{class:"stack hardset"});
+  const minsOf = blocks => 0;
+  function build(){
+    wrap.innerHTML = "";
+    const s = st(), vers = b.variants.length, vi = s.attempt % vers, blocks = b.variants[vi];
+    const need = Math.round((b.pass||HARD_PASS)*100);
+    if(s.passed){
+      wrap.append(h("div",{class:"hard-card ok"}, h("div",{class:"eyebrow"},"Extra Hard Set · passed"), h("h3",null, s.c+" / "+s.t+" correct ("+Math.round(100*s.c/s.t)+"%)"), h("p",{class:"small"}, "You passed on attempt "+(s.hist.length)+". Tomorrow’s day is open once today’s other activities are done.")));
+      return;
+    }
+    if(!s.t0){ s.t0 = Date.now(); save(); }
+    const clock = h("span",{class:"timer"}, "0:00"); const tick = ()=>{ clock.textContent = fmt(Math.round((Date.now()-s.t0)/1000)); }; tick(); TIMERS.push(setInterval(tick,1000));
+    const apis = [];
+    const intro = h("div",{class:"hard-card"}, h("div",{class:"row",style:"justify-content:space-between"}, h("div",{class:"eyebrow"},"Extra Hard Set · version "+(s.attempt+1)+(s.attempt>=vers?" (questions repeat in a new order)":"")), clock),
+      h("p",null, h("b",null,"≈ "+(b.mins||50)+" minutes · "+b.count+" questions · "+need+"% needed. "), "Each recording plays once, like the real test. Answer every question, then press Submit. If you miss the pass mark, read the explanations and start a fresh version."));
+    const items = blocks.map((sb,j)=>h("div",{class:"blk"}, R[sb.t](sb, {key:key+"-a"+s.attempt+"-"+j, mock:true, reg:a=>apis.push(a)})));
+    const out = h("div",{class:"hard-card",hidden:true}); const sub = h("button",{class:"btn red",type:"button"},"Submit Extra Hard Set");
+    sub.addEventListener("click",()=>{
+      const miss = apis.reduce((a,x)=>a+(x.missing?x.missing():0),0);
+      if(miss>0){ toast("Answer every question first: "+miss+" still empty."); return; }
+      sub.hidden = true; let c=0, tt=0; apis.forEach(x=>{ const r = x.grade(); c += r.c; tt += r.t; });
+      const p = tt? c/tt : 0, pass = p >= (b.pass||HARD_PASS) - 1e-9, secs = Math.round((Date.now()-s.t0)/1000);
+      s.hist.push({c, t:tt, at:new Date().toISOString(), secs}); out.hidden = false;
+      if(pass){ s.passed = true; s.c = c; s.t = tt; recordResult(key, c, tt, "L-HARD"); save(); celebrate();
+        out.className = "hard-card ok"; out.innerHTML = '<div class="eyebrow">Extra Hard Set · passed</div><h3>'+c+" / "+tt+" correct ("+Math.round(p*100)+"%)</h3><p class=\"small\">Well done. Look through the explanations below, then finish today’s checklist.</p>";
+      } else {
+        save(); const left = Math.ceil((b.pass||HARD_PASS)*tt) - c;
+        out.className = "hard-card bad"; out.innerHTML = '<div class="eyebrow">Extra Hard Set · not yet</div><h3>'+c+" / "+tt+" correct ("+Math.round(p*100)+"%)</h3><p class=\"small\">You need "+need+"%: "+left+" more correct answer"+(left===1?"":"s")+". Read every explanation below, especially the traps, then start a fresh version.</p>";
+        const again = h("button",{class:"btn primary",type:"button"},"Start a fresh version"); again.addEventListener("click",()=>{ s.attempt++; s.t0 = null; save(); build(); wrap.scrollIntoView({behavior:"smooth",block:"start"}); }); out.append(again);
+      }
+      out.scrollIntoView({behavior:"smooth",block:"center"});
+    });
+    wrap.append(intro, ...items, h("div",{class:"row"}, sub), out);
+  }
+  build();
+  return wrap;
+};
+
 R.mock = (b, ctx) => {
   const wrap = h("div",{class:"stack"});
   const state = {m1:null, m2:null};
@@ -7793,7 +8000,7 @@ function dayMinutes(d){ const m = d.stages.reduce((a,s)=>a+(s.mins||0),0); retur
 function durText(m){ const hh = Math.floor(m/60), mm = m%60; return hh? hh+" h"+(mm? " "+mm+" min":"") : mm+" min"; }
 function cap(s){ return s.charAt(0).toUpperCase()+s.slice(1); }
 
-const REQ_LABEL = {tutorial:"watch the tutorial to the end", etsself:"test-style self-score (11 responses)", dictation:"dictation", mcq:"questions", cw:"Complete the Words", listen:"listening questions", response:"Choose a Response", bas:"Build a Sentence", write:"writing task and self-review", repeat:"Listen and Repeat self-marks", interview:"interview self-score", typing:"typing test", analyzer:"fluency check", reflect:"reflection", mock:"mock test (both modules)"};
+const REQ_LABEL = {hardset:"Extra Hard Set (90% to pass)", tutorial:"watch the tutorial to the end", etsself:"test-style self-score (11 responses)", dictation:"dictation", mcq:"questions", cw:"Complete the Words", listen:"listening questions", response:"Choose a Response", bas:"Build a Sentence", write:"writing task and self-review", repeat:"Listen and Repeat self-marks", interview:"interview self-score", typing:"typing test", analyzer:"fluency check", reflect:"reflection", mock:"mock test (both modules)"};
 function rubricDone(r,id){ return !!r && BS.rubrics[id].criteria.every(c=>r[c.id]!=null); }
 function dayReqs(sec, day){
   const dk = dayKey(sec, day.n); const out = [];
@@ -7802,6 +8009,7 @@ function dayReqs(sec, day){
     switch(b.t){
       case "mcq": case "cw": case "listen": case "response": case "bas": case "dictation": ok = !!S.res[key]; break;
       case "mock": ok = !!S.res[key+"-summary"]; break;
+      case "hardset": ok = !!((S.hard||{})[key]||{}).passed; break;
       case "write": ok = !!w.submitted && rubricDone(w.rubric, b.kind==="email"?"email":"discussion"); break;
       case "interview": ok = rubricDone(w.rubric, "interview"); break;
       case "repeat": { const m = w.marks||[]; ok = b.items.every((_,i)=>m[i]!=null); break; }
