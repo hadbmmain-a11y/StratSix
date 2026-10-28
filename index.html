@@ -565,6 +565,11 @@ audio{width:100%;max-width:420px}
 .hard-card.bad{border-left-color:var(--err);background:var(--err-soft)}
 .hard-card h3{margin:2px 0 6px}
 .stage-head .pill.hard{background:var(--red-soft);color:var(--red-ink)}
+
+.day-btn.extra{margin-left:22px;width:calc(100% - 22px);padding:5px 6px;border-left:2px dashed var(--line-strong);border-radius:0 8px 8px 0}
+.day-btn.extra .day-num{background:var(--red-soft);border-color:var(--red);color:var(--red-ink);font-size:.8rem}
+.day-btn.extra.done .day-num{background:var(--ok);border-color:var(--ok);color:#fff}
+.day-btn.extra .day-title{font-size:.88rem}
 </style>
 <script type="application/json" id="bs-access">{"reading":{"mode":"dates","s":"2026-10-05","e":"2026-10-27","r":9},"listening":{"mode":"closed","s":"","e":"","r":2},"writing":{"mode":"closed","s":"","e":"","r":0},"speaking":{"mode":"closed","s":"","e":"","r":0}}</script>
 <div id="app"></div>
@@ -5926,7 +5931,7 @@ const L2B = [
   function addHard(n, versions, mins){
     const d = BS.sections.listening.days.find(x=>x.n===n); if(!d) return;
     const variants = versions.map(v=>[{t:"response", items:conv(v)}]);
-    d.stages.push({kind:"hard", title:"Extra Hard Set", mins, blocks:[{t:"hardset", pass:0.9, mins, count:versions[0].length, variants}]});
+    BS.hardSets = BS.hardSets || {}; (BS.hardSets.listening = BS.hardSets.listening || {})[n] = {t:"hardset", pass:0.9, mins, count:versions[0].length, variants};
   }
   addHard(2, [L2A, L2B], 50);
 })();
@@ -7797,7 +7802,7 @@ R.hardset = (b, ctx) => {
     const s = st(), vers = b.variants.length, vi = s.attempt % vers, blocks = b.variants[vi];
     const need = Math.round((b.pass||HARD_PASS)*100);
     if(s.passed){
-      wrap.append(h("div",{class:"hard-card ok"}, h("div",{class:"eyebrow"},"Extra Hard Set · passed"), h("h3",null, s.c+" / "+s.t+" correct ("+Math.round(100*s.c/s.t)+"%)"), h("p",{class:"small"}, "You passed on attempt "+(s.hist.length)+". Tomorrow’s day is open once today’s other activities are done.")));
+      wrap.append(h("div",{class:"hard-card ok"}, h("div",{class:"eyebrow"},"Extra Hard Set · passed"), h("h3",null, s.c+" / "+s.t+" correct ("+Math.round(100*s.c/s.t)+"%)"), h("p",{class:"small"}, "You passed on attempt "+(s.hist.length)+". The next day opens tomorrow.")));
       return;
     }
     if(!s.t0){ s.t0 = Date.now(); save(); }
@@ -7813,8 +7818,8 @@ R.hardset = (b, ctx) => {
       sub.hidden = true; let c=0, tt=0; apis.forEach(x=>{ const r = x.grade(); c += r.c; tt += r.t; });
       const p = tt? c/tt : 0, pass = p >= (b.pass||HARD_PASS) - 1e-9, secs = Math.round((Date.now()-s.t0)/1000);
       s.hist.push({c, t:tt, at:new Date().toISOString(), secs}); out.hidden = false;
-      if(pass){ s.passed = true; s.c = c; s.t = tt; recordResult(key, c, tt, "L-HARD"); save(); celebrate();
-        out.className = "hard-card ok"; out.innerHTML = '<div class="eyebrow">Extra Hard Set · passed</div><h3>'+c+" / "+tt+" correct ("+Math.round(p*100)+"%)</h3><p class=\"small\">Well done. Look through the explanations below, then finish today’s checklist.</p>";
+      if(pass){ s.passed = true; s.passedAt = new Date().toISOString(); s.c = c; s.t = tt; recordResult(key, c, tt, "L-HARD"); save(); celebrate();
+        out.className = "hard-card ok"; out.innerHTML = '<div class="eyebrow">Extra Hard Set · passed</div><h3>'+c+" / "+tt+" correct ("+Math.round(p*100)+"%)</h3><p class=\"small\">Well done. Look through the explanations below. The next day opens tomorrow.</p>";
       } else {
         save(); const left = Math.ceil((b.pass||HARD_PASS)*tt) - c;
         out.className = "hard-card bad"; out.innerHTML = '<div class="eyebrow">Extra Hard Set · not yet</div><h3>'+c+" / "+tt+" correct ("+Math.round(p*100)+"%)</h3><p class=\"small\">You need "+need+"%: "+left+" more correct answer"+(left===1?"":"s")+". Read every explanation below, especially the traps, then start a fresh version.</p>";
@@ -8030,9 +8035,13 @@ function dayReqs(sec, day){
 }
 const ACC_MIN = 0.9, ACC_TYPES = ["mcq","cw","listen","response","bas","dictation"];
 function localDay(iso){ const d = new Date(iso); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
-function doneToday(sec, n){ const p = S.days[dayKey(sec,n)]; if(!p || !p.done) return false; const t = new Date(); const td = t.getFullYear()+"-"+String(t.getMonth()+1).padStart(2,"0")+"-"+String(t.getDate()).padStart(2,"0"); return !p.at || localDay(p.at) >= td; }
-function isUnlocked(sec, n){ if(!S.teacher){ const st = modState(sec).st, g = modGrant(sec); if(st!=="open" && st!=="review" && g==="day") return hasUnlock(sec,n); } if(S.teacher || n<=1 || n<=relDay(sec) || hasUnlock(sec,n)) return true; const p = S.days[dayKey(sec,n-1)]; return !!(p && p.done) && !doneToday(sec, n-1); }
-function lockWhy(sec, n){ return doneToday(sec, n-1) ? "Opens tomorrow" : "Locked · finish Day "+(n-1); }
+function doneToday(sec, n){ const p0 = S.days[dayKey(sec,n)]; if(!p0 || !p0.done) return false; const hp = (typeof hardState==="function" && hardState(sec,n).passedAt) || null; const p = {at: (hp && (!p0.at || hp > p0.at)) ? hp : p0.at}; const t = new Date(); const td = t.getFullYear()+"-"+String(t.getMonth()+1).padStart(2,"0")+"-"+String(t.getDate()).padStart(2,"0"); return !p.at || localDay(p.at) >= td; }
+function hardOf(sec,n){ return (BS.hardSets && BS.hardSets[sec] && BS.hardSets[sec][n]) || null; }
+function hardKey(sec,n){ return "hard-"+sec+"-"+n; }
+function hardState(sec,n){ return ((S.hard||{})[hardKey(sec,n)]) || {}; }
+function hardPassed(sec,n){ return !!hardState(sec,n).passed; }
+function isUnlocked(sec, n){ if(!S.teacher){ const st = modState(sec).st, g = modGrant(sec); if(st!=="open" && st!=="review" && g==="day") return hasUnlock(sec,n); } if(S.teacher || n<=1 || n<=relDay(sec) || hasUnlock(sec,n)) return true; const p = S.days[dayKey(sec,n-1)]; return !!(p && p.done) && (!hardOf(sec,n-1) || hardPassed(sec,n-1)) && !doneToday(sec, n-1); }
+function lockWhy(sec, n){ if(hardOf(sec,n-1) && (S.days[dayKey(sec,n-1)]||{}).done && !hardPassed(sec,n-1)) return "Locked · pass Extra Set, Day "+(n-1); return doneToday(sec, n-1) ? "Opens tomorrow" : "Locked · finish Day "+(n-1); }
 const LOCK_SVG = '<svg viewBox="0 0 16 16" width="12" height="12" fill="currentColor" aria-hidden="true"><path d="M5 7V5a3 3 0 1 1 6 0v2h.5A1.5 1.5 0 0 1 13 8.5v5A1.5 1.5 0 0 1 11.5 15h-7A1.5 1.5 0 0 1 3 13.5v-5A1.5 1.5 0 0 1 4.5 7H5zm1.5 0h3V5a1.5 1.5 0 0 0-3 0v2z"/></svg>';
 
 function viewSection(){
@@ -8041,12 +8050,8 @@ function viewSection(){
   let day = s.days.find(d=>d.n===VIEW.day) || s.days[0];
   if(!isUnlocked(sec, day.n)) day = s.days.find(d=>d.n===lastDay(sec)) || s.days[0];
   const dayBtns = {};
-  const track = h("aside",{class:"track"}, h("div",{class:"track-head"}, h("div",{class:"eyebrow"}, s.code+" · 17 days"), h("h2",null,s.title), S.teacher? h("span",{class:"pill red",style:"margin-top:6px"},"Teacher preview: all days open") : null), ...s.days.map(d=>{
-    const open = isUnlocked(sec,d.n);
-    const b = h("button",{class:"day-btn"+((S.days[dayKey(sec,d.n)]||{}).done?" done":"")+(open?"":" locked"),"aria-current":d.n===day.n?"true":"false",disabled:open?null:true,title:open?null:"Complete Day "+(d.n-1)+" to unlock",onclick:()=>go({name:"sec",sec,day:d.n})}, h("span",{class:"day-num",html: open? String(d.n).padStart(2,"0") : LOCK_SVG}), h("span",null, h("div",{class:"day-title"}, d.title), h("div",{class:"day-sub"}, open? d.task : lockWhy(sec, d.n))), null);
-    dayBtns[d.n] = b; return b; }));
-  const sel = h("select",{class:"input track-select","aria-label":"Choose a day",id:"day-select"}, ...s.days.map(d=>h("option",{value:String(d.n),selected:d.n===day.n?true:null,disabled:isUnlocked(sec,d.n)?null:true}, "Day "+d.n+" · "+d.title+((S.days[dayKey(sec,d.n)]||{}).done?" ✓": isUnlocked(sec,d.n)? "" : " (locked)"))));
-  sel.addEventListener("change",()=>go({name:"sec",sec,day:+sel.value}));
+  const track = trackFor(sec, day.n, false, dayBtns);
+  const sel = trackSelect(sec, day.n, false);
   const dk = dayKey(sec,day.n);
   const head = h("div",{class:"sheet-head"}, h("div",{class:"row",style:"justify-content:space-between"}, h("span",{class:"eyebrow"}, s.title+" · Day "+day.n+" of 17"), (S.days[dk]||{}).done? h("span",{class:"pill ok"},"Completed") : null), h("h1",null, day.title), h("div",{class:"meta"}, h("span",{class:"pill"}, day.task), h("span",{class:"pill plain"}, "≈ "+durText(dayMinutes(day))+" of student work"), day.level? h("span",{class:"pill plain"}, day.level):null), h("p",{class:"objective",html:"<b>By the end of today:</b> "+day.objective}), day.live? h("div",{class:"live"}, h("span",{class:"pill red"},"Live class"), h("span",{html:day.live})) : null);
   const stages = day.stages.map((st,si)=>h("section",{class:"stage"}, h("div",{class:"stage-head"}, h("span",{class:"stage-no"}, "STAGE "+(si+1)+" / "+day.stages.length), h("h3",null, st.title || STAGE[st.kind]), h("span",{class:"pill plain"}, STAGE[st.kind]||st.kind), st.mins? h("span",{class:"pill plain"}, st.mins+" min"):null), h("div",{class:"stage-body"}, ...st.blocks.map((b,bi)=>h("div",{class:"blk",id:"blk-"+dk+"-"+si+"-"+bi}, renderBlock(b, {key:dk+"-"+si+"-"+bi})))) ));
@@ -8057,7 +8062,8 @@ function viewSection(){
   const list = h("ul",{class:"req-list"});
   const nextBtn = next? h("button",{class:"btn primary",onclick:()=>{ if(isUnlocked(sec,next.n)) go({name:"sec",sec,day:next.n}); }},"Day "+next.n+" →") : null;
   const footMsg = h("p",{class:"small muted"}); const unlk = S.teacher? null : unlockBox(sec);
-  const foot = h("div",{class:"day-foot",style:"flex-direction:column;align-items:stretch"}, h("div",{class:"row",style:"justify-content:space-between"}, h("h3",null,"Day "+day.n+" checklist"), h("span",{class:"pill plain"})), footMsg, list, unlk, h("div",{class:"row",style:"justify-content:space-between"}, prev? h("button",{class:"btn",onclick:()=>go({name:"sec",sec,day:prev.n})},"← Day "+prev.n) : h("span"), nextBtn));
+  const hardNote = hardOf(sec,day.n)? h("div",{class:"hard-card"}) : null;
+  const foot = h("div",{class:"day-foot",style:"flex-direction:column;align-items:stretch"}, h("div",{class:"row",style:"justify-content:space-between"}, h("h3",null,"Day "+day.n+" checklist"), h("span",{class:"pill plain"})), footMsg, list, hardNote, unlk, h("div",{class:"row",style:"justify-content:space-between"}, prev? h("button",{class:"btn",onclick:()=>go({name:"sec",sec,day:prev.n})},"← Day "+prev.n) : h("span"), nextBtn));
   const pillEl = foot.querySelector(".pill");
   function refresh(){
     const reqs = dayReqs(sec, day); const n = reqs.filter(r=>r.ok).length; const all = n===reqs.length;
@@ -8070,11 +8076,54 @@ function viewSection(){
       if(r.acc && !r.ok && r.low && r.low.length && !done){ list.append(h("li",{class:"acc-redo"}, h("span"), h("div",{class:"stack",style:"gap:6px"}, h("span",{class:"small"}, "Read the explanations for the sets below, then do them again: "+r.low.map(x=>x.label+" ("+x.r.c+"/"+x.r.t+")").join(", ")+"."), h("div",null, h("button",{class:"btn sm primary",type:"button",onclick:()=>{ r.low.forEach(x=>{ delete S.res[x.k]; }); save(); go({name:"sec",sec,day:day.n}); setTimeout(()=>{ const t=document.getElementById("blk-"+r.low[0].k); if(t) t.scrollIntoView({block:"start"}); }, 50); }}, "Redo the sets below 90%"))))); }
     });
     footMsg.textContent = done ? (next? (isUnlocked(sec,next.n)? "Well done. Day "+next.n+" is open." : "Well done! Day "+next.n+" opens tomorrow. One day at a time helps you remember more.") : "This was the last day of the section.") : "Complete every activity below with at least 90% accuracy to unlock "+(next? "Day "+next.n : "the end of the section")+". Speaking drills and habit checklists are recommended but not required.";
+    if(hardNote){ const hp = hardPassed(sec,day.n); hardNote.className = "hard-card"+(hp?" ok":""); hardNote.innerHTML = ""; hardNote.append(h("div",{class:"eyebrow"},"Extra Set · Day "+day.n), h("p",{class:"small"}, hp? "Passed. Day "+(next?next.n:"")+" opens tomorrow." : (done? "Day "+day.n+" is finished. Now go to the Extra Set (90% needed) to unlock Day "+(next?next.n:"the next day")+"." : "After you finish today’s activities, open the Extra Set from the "+s.title+" menu (it appears under Day "+day.n+").")), done && !hp? h("button",{class:"btn primary",type:"button",onclick:()=>go({name:"hard",sec,day:day.n})},"Open Extra Set · Day "+day.n+" →") : null); }
     if(nextBtn){ const open = isUnlocked(sec,next.n); nextBtn.disabled = !open; nextBtn.innerHTML = open? "Day "+next.n+" →" : LOCK_SVG+" Day "+next.n; }
     if(done){ const b = dayBtns[day.n]; b && b.classList.add("done"); const nb = next && isUnlocked(sec,next.n) && dayBtns[next.n]; if(nb && nb.disabled){ nb.disabled=false; nb.classList.remove("locked"); nb.removeAttribute("title"); nb.querySelector(".day-num").textContent = String(next.n).padStart(2,"0"); nb.querySelector(".day-sub").textContent = next.task; } const o = next && isUnlocked(sec,next.n) && sel.querySelector('option[value="'+next.n+'"]'); if(o){ o.disabled=false; o.textContent = "Day "+next.n+" · "+next.title; } }
   }
   onSaveHook = refresh; refresh();
   return h("main",{class:"page"}, h("div",{class:"desk"}, track, h("div",{class:"sheet"}, sel, head, ...stages, foot)));
+}
+
+/* Side menu of a section: days, with an Extra Set entry under each day that has one */
+function trackFor(sec, curDay, hardView, dayBtns){
+  const s = BS.sections[sec]; dayBtns = dayBtns || {};
+  return h("aside",{class:"track"}, h("div",{class:"track-head"}, h("div",{class:"eyebrow"}, s.code+" · 17 days"), h("h2",null,s.title), S.teacher? h("span",{class:"pill red",style:"margin-top:6px"},"Teacher preview: all days open") : null), ...s.days.flatMap(d=>{
+    const open = isUnlocked(sec,d.n);
+    const b = h("button",{class:"day-btn"+((S.days[dayKey(sec,d.n)]||{}).done?" done":"")+(open?"":" locked"),"aria-current":(!hardView && d.n===curDay)?"true":"false",disabled:open?null:true,title:open?null:lockWhy(sec,d.n),onclick:()=>go({name:"sec",sec,day:d.n})}, h("span",{class:"day-num",html: open? String(d.n).padStart(2,"0") : LOCK_SVG}), h("span",null, h("div",{class:"day-title"}, d.title), h("div",{class:"day-sub"}, open? d.task : lockWhy(sec, d.n))), null);
+    dayBtns[d.n] = b;
+    const hb = hardOf(sec,d.n); if(!hb) return [b];
+    const dd = !!(S.days[dayKey(sec,d.n)]||{}).done, pass = hardPassed(sec,d.n), xopen = !!S.teacher || dd, st = hardState(sec,d.n);
+    const xb = h("button",{class:"day-btn extra"+(pass?" done":"")+(xopen?"":" locked"),"aria-current":(hardView && d.n===curDay)?"true":"false",disabled:xopen?null:true,title:xopen?null:"Finish Day "+d.n+" first",onclick:()=>go({name:"hard",sec,day:d.n})},
+      h("span",{class:"day-num",html: pass? "✓" : (xopen? "★" : LOCK_SVG)}),
+      h("span",null, h("div",{class:"day-title"},"Extra Set · Day "+d.n), h("div",{class:"day-sub"}, pass? "Passed "+Math.round(100*st.c/st.t)+"%" : (xopen? "Open · 90% to pass · ≈ "+hb.mins+" min" : "Opens when Day "+d.n+" is finished"))), null);
+    return [b, xb];
+  }));
+}
+function trackSelect(sec, curDay, hardView){
+  const s = BS.sections[sec];
+  const sel = h("select",{class:"input track-select","aria-label":"Choose a day",id:"day-select"}, ...s.days.flatMap(d=>{
+    const o = h("option",{value:String(d.n),selected:(!hardView && d.n===curDay)?true:null,disabled:isUnlocked(sec,d.n)?null:true}, "Day "+d.n+" · "+d.title+((S.days[dayKey(sec,d.n)]||{}).done?" ✓": isUnlocked(sec,d.n)? "" : " (locked)"));
+    const hb = hardOf(sec,d.n); if(!hb) return [o];
+    const dd = !!(S.days[dayKey(sec,d.n)]||{}).done;
+    return [o, h("option",{value:"x"+d.n,selected:(hardView && d.n===curDay)?true:null,disabled:(S.teacher||dd)?null:true}, "★ Extra Set · Day "+d.n+(hardPassed(sec,d.n)?" ✓":(S.teacher||dd?"":" (locked)")))];
+  }));
+  sel.addEventListener("change",()=>{ const v = sel.value; if(v[0]==="x") go({name:"hard",sec,day:+v.slice(1)}); else go({name:"sec",sec,day:+v}); });
+  return sel;
+}
+function viewHard(){
+  const sec = VIEW.sec, n = VIEW.day, s = BS.sections[sec], day = s.days.find(d=>d.n===n), hb = hardOf(sec,n);
+  if(!day || !hb) return viewHome();
+  let track = trackFor(sec, n, true); const sel = trackSelect(sec, n, true);
+  const dayDone = !!(S.days[dayKey(sec,n)]||{}).done;
+  const next = s.days.find(d=>d.n===n+1);
+  const head = h("div",{class:"sheet-head"}, h("div",{class:"row",style:"justify-content:space-between"}, h("span",{class:"eyebrow"}, s.title+" · Extra Set · Day "+n), hardPassed(sec,n)? h("span",{class:"pill ok"},"Passed") : null), h("h1",null,"Extra Set · Day "+n), h("div",{class:"meta"}, h("span",{class:"pill"}, day.title), h("span",{class:"pill plain"}, "≈ "+hb.mins+" min"), h("span",{class:"pill plain"}, "90% to pass")),
+    h("p",{class:"objective",html:"<b>Why this set:</b> Day "+n+" leads to this longer, harder set. You need <b>90% or more</b> to unlock "+(next? "Day "+next.n : "the next step")+"."}));
+  let body;
+  if(!S.teacher && !dayDone){ body = h("div",{class:"hard-card"}, h("h3",null,"Finish Day "+n+" first"), h("p",{class:"small"},"Complete every activity of Day "+n+", then come back to this Extra Set."), h("button",{class:"btn primary",type:"button",onclick:()=>go({name:"sec",sec,day:n})},"Go to Day "+n)); }
+  else body = renderBlock(hb, {key:hardKey(sec,n)});
+  onSaveHook = ()=>{ const nt = trackFor(sec, n, true); track.replaceWith(nt); track = nt; };
+  const foot = h("div",{class:"day-foot"}, h("button",{class:"btn",onclick:()=>go({name:"sec",sec,day:n})},"← Day "+n), next? h("button",{class:"btn primary",onclick:()=>{ if(isUnlocked(sec,next.n)) go({name:"sec",sec,day:next.n}); else toast(lockWhy(sec,next.n)); }},"Day "+next.n+" →") : h("span"));
+  return h("main",{class:"page"}, h("div",{class:"desk"}, track, h("div",{class:"sheet"}, sel, head, h("section",{class:"stage"}, h("div",{class:"stage-head"}, h("span",{class:"stage-no"},"EXTRA SET"), h("h3",null,"Extra Hard Set"), h("span",{class:"pill plain"},"≈ "+hb.mins+" min")), h("div",{class:"stage-body"}, body)), foot)));
 }
 
 function viewTutorials(){
@@ -9234,6 +9283,7 @@ function render(){
   root.append(navBar());
   let v;
   if(VIEW.name==="sec") v = viewSection();
+  else if(VIEW.name==="hard") v = viewHard();
   else if(VIEW.name==="rubrics") v = viewRubrics();
   else if(VIEW.name==="tutorials") v = viewTutorials();
   else if(VIEW.name==="tutorial") v = viewTutorial();
