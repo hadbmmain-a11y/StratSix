@@ -8547,7 +8547,7 @@ function viewHome(){
   const fmtT = h("div",{class:"panel stack"}, h("div",{class:"eyebrow"},"The test at a glance"), h("h2",null,"12 task types, about 90 minutes"), h("div",{class:"tbl-wrap"}, h("table",{class:"format-table"}, h("thead",null,h("tr",null,h("th",null,"Section"),h("th",null,"Task"),h("th",null,"What you do"))), h("tbody",null, ...BS.format.map(r=>h("tr",null, h("td",{class:"sec"},r[0]), h("td",null,r[1]), h("td",{class:"muted"},r[2])))))), h("div",{class:"small muted"},"Reading and Listening are adaptive: your Module 1 result decides whether Module 2 is harder or easier. Writing and Speaking are fixed."));
   const week = h("div",{class:"panel stack"}, h("div",{class:"eyebrow"},"How to use StratSix"), h("h2",null,"Your study routine"), h("ol",{class:"steps"}, ...BS.routine.map(r=>h("li",null,h("div",null,h("b",null,r[0]),h("span",null,r[1]))))));
   const P = progressPanels();
-  const results = h("section",{id:"results",class:"stack",style:"margin-top:16px"}, h("div",{class:"eyebrow"},"Your results"), h("h2",null,"How you are doing"), P.etsPanel, P.accuracy);
+  const results = h("section",{id:"results",class:"stack",style:"margin-top:16px"}, h("div",{class:"eyebrow"},"Your results"), h("h2",null,"How you are doing"), P.accuracy);
   const more = h("details",{id:"share",class:"panel",style:"margin-top:16px"}, h("summary",{class:"q",style:"cursor:pointer"},"Share a report, back up, and audio settings"), h("div",{class:"stack",style:"margin-top:12px"}, P.send, P.backup));
   return h("main",{class:"page"}, hero, cards, feedbackBlock(), results, accessPanel(), h("div",{class:"two",style:"margin-top:16px"}, fmtT, week), more);
 }
