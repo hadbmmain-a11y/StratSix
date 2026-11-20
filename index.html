@@ -678,7 +678,7 @@ BS.teacher = {
     ["Collect reports","Students copy or download their report from the Dashboard and send it to you. Writing texts are included in full."],
     ["Run the mocks","Day 16 of each section is an adaptive mock. Module 1 routes students to an upper or lower Module 2, as on the real test."]
   ],
-  collect:"<p><b>Student accounts and submissions.</b> Each student signs in with their Google account. StratSix stores their recordings, writing and scores securely in Supabase. Recordings sent with <b>Send my recordings to my teacher</b> and writing sent with <b>Send for AI feedback</b> appear in the <b>Review queue</b> below (sign in with your teacher Google account), where you add your own score and note. The student sees your score in <b>Your feedback</b> on the Dashboard.</p><p>Progress is saved to each student’s account and appears in the <b>Students</b> tab. If you also want a copy, ask them to open the <b>Dashboard</b> and either:</p><ul><li><b>Copy report</b> and paste it into WhatsApp or email, or</li><li><b>Download report</b> to send an HTML file.</li></ul><p>For speaking, students record on their phone while the page plays the prompts and runs the timer. Ask them to send the audio file together with the report. Their self-scores on the four interview criteria are in the report, so you can compare them with your own score. The gap between the two is useful feedback in itself.</p><p>A student who changes device can copy a <b>backup code</b> and restore it on the new device.</p><p><b>Speaking scores.</b> On Speaking Days 1, 6, 15 and 16, students score their full set (7 Listen and Repeat + 4 interview responses) with the StratSix scoring guides (0–5, the same task scale as the test). When you receive the recording, turn on preview mode, open the scoring tool below, give each response 0–5, add feedback and press <i>Create score code</i>. Send the message to the student; when they paste the code on that day, they see your scores next to theirs and an estimated band.</p>"
+  collect:"<p><b>Student accounts and submissions.</b> Each student signs in with their Google account. StratSix stores their recordings, writing and scores securely in Supabase. Recordings sent with <b>Send my recordings to my teacher</b> and writing sent with <b>Send for AI feedback</b> appear in the <b>Review queue</b> below (sign in with your teacher Google account), where you add your own score and note. The student sees your score in <b>Your feedback</b> on the Dashboard.</p><p>Progress is saved to each student’s account and appears in the <b>Students</b> tab. If you also want a copy, ask them to open the <b>Dashboard</b> and either:</p><ul><li><b>Copy report</b> and paste it into WhatsApp or email, or</li><li><b>Download report</b> to send an HTML file.</li></ul><p>For speaking, students record on their phone while the page plays the prompts and runs the timer. Ask them to send the audio file together with the report. Their self-scores on the four interview criteria are in the report, so you can compare them with your own score. The gap between the two is useful feedback in itself.</p><p>A student who changes device can copy a <b>backup code</b> and restore it on the new device.</p><p><b>Speaking scores.</b> Students record the scored sets (Days 1, 6, 15 and 16) and send them with <b>Send my recordings to my teacher</b>. Score each response 0–5 in the <b>Review queue</b> with the StratSix scoring guides (see Guides → Rubrics) and add a note. The student sees your score in <b>Your feedback</b> on the Dashboard.</p>"
 };
 
 /* ---------------- StratSix speaking scoring guides (0–5 task scale; original wording) ---------------- */
@@ -8236,17 +8236,9 @@ function scoreReport(self, t){
 
 R.etsteacher = (b, ctx) => {
   const key = ctx.key; const parts = key.split("-"); const selfKey = parts.slice(0,-1).concat(String(+parts[parts.length-1]-1)).join("-");
-  const box = h("div",{class:"stack"});
-  function draw(){
-    box.innerHTML = "";
-    const t = (S.work[key]||{}).teacher;
-    if(t){ box.append(scoreReport(S.work[selfKey], t)); const again = h("button",{class:"btn ghost sm",onclick:()=>{ S.work[key].teacher=null; save(); draw(); }},"Enter a different code"); box.append(again); return; }
-    const inp = h("textarea",{class:"textarea",style:"min-height:80px",id:"tcode-"+key,placeholder:"Paste the score code from your teacher (it starts with BS6-)"});
-    const btn = h("button",{class:"btn primary",onclick:()=>{ const o = decodeScore(inp.value); if(!o){ toast("That code is not valid. Copy the whole code from your teacher’s message and try again."); return; } if(o.d!==b.day){ toast("This code is for Speaking Day "+o.d+". Paste it on that day."); return; } S.work[key] = {kind:"S-ETS-T", day:b.day, teacher:o, title:"Day "+b.day+" teacher score", at:new Date().toISOString()}; save(); toast("Teacher score added."); draw(); }},"Show my score report");
-    box.append(h("div",{class:"prose",html:"<p><b>Teacher score.</b> After your teacher scores your recording, you will receive a code. Paste it here to see your test-style score report. You can continue to the next day while you wait.</p>"}), inp, h("div",{class:"row"}, btn));
-  }
-  draw();
-  return box;
+  const t = (S.work[key]||{}).teacher;
+  if(t) return h("div",{class:"stack"}, scoreReport(S.work[selfKey], t));
+  return h("div",{class:"prose",html:"<p><b>Teacher score.</b> After you send your recordings, your teacher scores them. The score and comments appear in <b>Your feedback</b> on the Dashboard. You can continue to the next day while you wait.</p>"});
 };
 
 /* ---------- narrated tutorial player ---------- */
@@ -8756,10 +8748,8 @@ function progressPanels(){
     voiceRow("Woman’s voice","voiceW","W"), voiceRow("Man’s voice","voiceM","M"),
     voiceTip(),
     h("button",{class:"btn sm",onclick:()=>{ TTS.speak(["W: This is the woman's voice.","M: And this is the man's voice."]); }},"Test the voices"));
-  const etsRows = BS.scoredSpeakingDays.map(n=>{ let self=null, t=null; for(const k in S.work){ const w=S.work[k]; if(w && w.day===n && w.kind==="S-ETS") self=w; if(w && w.day===n && w.kind==="S-ETS-T" && w.teacher) t=w.teacher; } const sb = self && self.lr && self.lr.every(x=>x!=null) && self.iv.every(x=>x!=null) ? bandText(estBand(self.lr,self.iv)) : "–"; return h("tr",null, h("td",null,"Day "+n), h("td",{class:"mono"}, sb), h("td",{class:"mono",style:"font-weight:700"}, t? bandText(estBand(t.lr,t.iv)) : "waiting")); });
-  const etsPanel = h("div",{class:"panel stack",style:"margin-top:16px"}, h("div",{class:"eyebrow"},"Speaking · test-style scoring"), h("h2",null,"Speaking score reports"), h("div",{class:"tbl-wrap"}, h("table",{class:"format-table"}, h("thead",null,h("tr",null,h("th",null,"Scored day"),h("th",null,"Your self-score"),h("th",null,"Teacher score"))), h("tbody",null,...etsRows))), h("p",{class:"small muted"},"Bands are estimates based on the 0–5 task scores. Only ETS can give an official score."));
   const accuracy = h("div",{class:"panel stack"}, h("div",{class:"eyebrow"},"Auto-scored tasks"), h("h2",null,"Accuracy by task type"), empty? h("p",{class:"muted"},"Nothing scored yet. Your results appear here after you check answers in any practice task.") : bars, h("p",{class:"small muted"},"Red bars are under 60%. Review the strategy day for that task before your next mock."));
-  return {etsPanel, accuracy, send, backup};
+  return {accuracy, send, backup};
 }
 function voiceRow(label, key, role){
   TTS.load();
@@ -8775,30 +8765,6 @@ function voiceTip(){
 }
 function settingRow(label, key, opts){ const sel = h("select",{class:"input",id:"set-"+key,style:"max-width:260px"}, ...opts.map(([v,l])=>h("option",{value:String(v),selected: String(S.settings[key])===String(v)?true:null}, l))); sel.addEventListener("change",()=>{ S.settings[key] = key==="rate"? +sel.value : sel.value; save(); toast(label+" updated."); }); return h("div",{class:"row"}, h("label",{for:"set-"+key,style:"min-width:140px;font-weight:600"},label), sel); }
 
-function scoringTool(){
-  const st = {name:"", day:BS.scoredSpeakingDays[0], lr:[], iv:[], g:[], s:"", p:""};
-  const wrap = h("div",{class:"panel stack",style:"margin-top:16px"});
-  const nameIn = h("input",{class:"input",id:"ts-name",placeholder:"Student name"}); nameIn.addEventListener("input",()=>{ st.name=nameIn.value; });
-  const daySel = h("select",{class:"input",id:"ts-day",style:"max-width:220px"}, ...BS.scoredSpeakingDays.map(n=>h("option",{value:String(n)},"Speaking Day "+n)));
-  const sheetBox = h("div"); const bandOut = h("div",{class:"result"}); const out = h("div",{class:"stack"});
-  function upd(){ const done = st.lr.every(x=>x!=null) && st.iv.every(x=>x!=null); bandOut.innerHTML = done? '<span class="score-chip">Estimated band '+bandText(estBand(st.lr,st.iv))+'</span>' : '<span class="small muted">'+(st.lr.filter(x=>x==null).length+st.iv.filter(x=>x==null).length)+' responses still to score.</span>'; }
-  function build(){ const set = scoredSet(st.day); st.lr = set.lr.map(()=>null); st.iv = set.iv.map(()=>null); sheetBox.innerHTML=""; sheetBox.append(scoreSheet(st.day, st.lr, st.iv, upd)); out.innerHTML=""; upd(); }
-  daySel.addEventListener("change",()=>{ st.day = +daySel.value; build(); });
-  const tags = h("div",{class:"selfmark"}, ...BS.etsGuides.tags.map(tg=>{ const bt = h("button",{type:"button"}, tg); bt.addEventListener("click",()=>{ const i = st.g.indexOf(tg); if(i<0) st.g.push(tg); else st.g.splice(i,1); bt.classList.toggle("sel"); }); return bt; }));
-  const sIn = h("textarea",{class:"textarea",style:"min-height:70px",id:"ts-s",placeholder:"Strengths (optional)"}); sIn.addEventListener("input",()=>{ st.s=sIn.value; });
-  const pIn = h("textarea",{class:"textarea",style:"min-height:70px",id:"ts-p",placeholder:"Next steps: what to practise before the next scored day (optional)"}); pIn.addEventListener("input",()=>{ st.p=pIn.value; });
-  const gen = h("button",{class:"btn primary",onclick:()=>{
-    if(st.lr.some(x=>x==null) || st.iv.some(x=>x==null)){ toast("Score all 11 responses first."); return; }
-    const o = {v:1, n:st.name.trim(), d:st.day, lr:st.lr.slice(), iv:st.iv.slice(), g:st.g.slice(), s:st.s.trim(), p:st.p.trim(), t:new Date().toISOString()};
-    const code = encodeScore(o); const b = estBand(o.lr,o.iv);
-    const msg = "StratSix speaking score"+(o.n? " for "+o.n:"")+" (Day "+o.d+"): estimated band "+bandText(b)+".\nOpen StratSix → Speaking → Day "+o.d+" → “Teacher score” and paste this code:\n"+code;
-    const ta = h("textarea",{class:"textarea",style:"min-height:110px",readonly:true,id:"ts-out"}); ta.value = msg;
-    out.innerHTML=""; out.append(h("h4",null,"Message for the student"), ta, h("div",{class:"row"}, h("button",{class:"btn primary",onclick:()=>copyText(msg, ta)},"Copy message")), scoreReport(null, o));
-  }},"Create score code");
-  wrap.append(h("h2",null,"Score a student’s speaking recording"), h("p",{class:"muted small"},"Listen to the student’s recording of the scored set and give each response a score from 0 to 5 with the StratSix scoring guides. StratSix creates a code that you send to the student; their report then shows your scores next to their self-scores."), h("div",{class:"row"}, nameIn, daySel), sheetBox, bandOut, h("h4",null,"Feedback"), h("div",{class:"small muted"},"Tap any that apply."), tags, sIn, pIn, h("div",{class:"row"}, gen), out);
-  build();
-  return wrap;
-}
 function teacherPanel(){
   const pin = h("input",{class:"input",type:"password",id:"t-pin",placeholder:"Teacher PIN",style:"max-width:200px",autocomplete:"off"});
   const on = h("button",{class:"btn primary",onclick:()=>{ if(pin.value.trim()===TEACHER_PIN){ S.teacher=true; persist(); toast("Preview mode on. All days are open on this device."); render(); } else toast("That PIN is not correct."); }},"Open all days");
@@ -8897,7 +8863,6 @@ function viewTeacher(){
     h("div",{class:"two"}, h("div",{class:"panel stack"}, h("h2",null,"Running the course"), h("ol",{class:"steps"}, ...T.steps.map(r=>h("li",null,h("div",null,h("b",null,r[0]),h("span",{html:r[1]})))))), h("div",{class:"panel stack"}, h("h2",null,"Collecting student work"), h("div",{class:"prose",html:T.collect}))),
     teacherPanel(), S.teacher? teacherReview() : null, driveStatus(), S.teacher? accessTool() : null, S.teacher? unlockTool() : null,
     S.teacher? plansPanel() : h("div",{class:"panel",style:"margin-top:16px"}, h("h2",null,"Lesson plans (PDF)"), h("p",{class:"muted small"},"Turn on preview mode above with your teacher PIN to download the lesson plans for every class.")),
-    S.teacher? scoringTool() : h("div",{class:"panel",style:"margin-top:16px"}, h("h2",null,"Score a student’s speaking recording"), h("p",{class:"muted small"},"Turn on preview mode above to open the speaking scoring tool.")),
     h("div",{class:"panel stack",style:"margin-top:16px"}, h("h2",null,"Course map"), h("p",{class:"muted small"},"The last column shows the ETS TOEFL iBT® lesson plan that matches each live class. StratSix does not reproduce the lesson plans."), ...SECS.map(sec=>h("div",{class:"stack"}, h("h3",null,cap(sec)), h("div",{class:"tbl-wrap"}, h("table",{class:"format-table"}, h("thead",null,h("tr",null,h("th",null,"Day"),h("th",null,"Title"),h("th",null,"Task focus"),h("th",null,"Live class"))), h("tbody",null, ...BS.sections[sec].days.map(d=>h("tr",null, h("td",{class:"mono"},String(d.n)), h("td",null,d.title), h("td",{class:"muted"},d.task), h("td",{class:"muted small",html:d.live? d.live.replace(/<[^>]+>/g,"").split(".")[0] : "–"}))))))))));
 }
 
