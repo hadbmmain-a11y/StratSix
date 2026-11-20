@@ -678,7 +678,7 @@ BS.teacher = {
     ["Collect reports","Students copy or download their report from the Dashboard and send it to you. Writing texts are included in full."],
     ["Run the mocks","Day 16 of each section is an adaptive mock. Module 1 routes students to an upper or lower Module 2, as on the real test."]
   ],
-  collect:"<p><b>Student accounts and submissions.</b> Each student signs in with their Google account. StratSix stores their recordings, writing and scores securely in Supabase. Recordings sent with <b>Send my recordings to my teacher</b> and writing sent with <b>Send for AI feedback</b> appear in the <b>Review queue</b> below (sign in with your teacher Google account), where you add your own score and note. The student sees your score in <b>My feedback</b>.</p><p>Progress is saved to each student’s account and appears in the <b>Students</b> tab. If you also want a copy, ask them to open the <b>Dashboard</b> and either:</p><ul><li><b>Copy report</b> and paste it into WhatsApp or email, or</li><li><b>Download report</b> to send an HTML file.</li></ul><p>For speaking, students record on their phone while the page plays the prompts and runs the timer. Ask them to send the audio file together with the report. Their self-scores on the four interview criteria are in the report, so you can compare them with your own score. The gap between the two is useful feedback in itself.</p><p>A student who changes device can copy a <b>backup code</b> and restore it on the new device.</p><p><b>Speaking scores.</b> On Speaking Days 1, 6, 15 and 16, students score their full set (7 Listen and Repeat + 4 interview responses) with the StratSix scoring guides (0–5, the same task scale as the test). When you receive the recording, turn on preview mode, open the scoring tool below, give each response 0–5, add feedback and press <i>Create score code</i>. Send the message to the student; when they paste the code on that day, they see your scores next to theirs and an estimated band.</p>"
+  collect:"<p><b>Student accounts and submissions.</b> Each student signs in with their Google account. StratSix stores their recordings, writing and scores securely in Supabase. Recordings sent with <b>Send my recordings to my teacher</b> and writing sent with <b>Send for AI feedback</b> appear in the <b>Review queue</b> below (sign in with your teacher Google account), where you add your own score and note. The student sees your score in <b>Your feedback</b> on the Dashboard.</p><p>Progress is saved to each student’s account and appears in the <b>Students</b> tab. If you also want a copy, ask them to open the <b>Dashboard</b> and either:</p><ul><li><b>Copy report</b> and paste it into WhatsApp or email, or</li><li><b>Download report</b> to send an HTML file.</li></ul><p>For speaking, students record on their phone while the page plays the prompts and runs the timer. Ask them to send the audio file together with the report. Their self-scores on the four interview criteria are in the report, so you can compare them with your own score. The gap between the two is useful feedback in itself.</p><p>A student who changes device can copy a <b>backup code</b> and restore it on the new device.</p><p><b>Speaking scores.</b> On Speaking Days 1, 6, 15 and 16, students score their full set (7 Listen and Repeat + 4 interview responses) with the StratSix scoring guides (0–5, the same task scale as the test). When you receive the recording, turn on preview mode, open the scoring tool below, give each response 0–5, add feedback and press <i>Create score code</i>. Send the message to the student; when they paste the code on that day, they see your scores next to theirs and an estimated band.</p>"
 };
 
 /* ---------------- StratSix speaking scoring guides (0–5 task scale; original wording) ---------------- */
@@ -7836,7 +7836,7 @@ R.write = (b, ctx) => {
   sendBtn.addEventListener("click", async ()=>{
     if(words(ta.value)<10){ toast("Write your response first."); return; }
     sendBtn.disabled = true; sendBtn.textContent = "Sending…";
-    try{ const w = S.work[key]||{}; await ssPost({action:"writing", section:"Writing", day:key.split("-")[1], task:taskName, prompt:wPrompt, text:ta.value, words:words(ta.value), selfScore:w.rubric||null}); logSub({kind:"writing", key, day:key.split("-")[1], task:taskName}); sendBtn.textContent = "Sent ✓"; sendMsg.textContent = "Saved. AI feedback appears in My feedback after the next scoring run, then your teacher adds a score."; toast("Sent to your teacher."); }
+    try{ const w = S.work[key]||{}; await ssPost({action:"writing", section:"Writing", day:key.split("-")[1], task:taskName, prompt:wPrompt, text:ta.value, words:words(ta.value), selfScore:w.rubric||null}); logSub({kind:"writing", key, day:key.split("-")[1], task:taskName}); sendBtn.textContent = "Sent ✓"; sendMsg.textContent = "Saved. AI feedback appears in Your feedback on the Dashboard after the next scoring run, then your teacher adds a score."; toast("Sent to your teacher."); }
     catch(e){ sendBtn.textContent = "Send for AI feedback"; sendMsg.textContent = e.message; toast(e.message); }
     finally{ sendBtn.disabled = false; }
   });
@@ -8047,7 +8047,7 @@ function sendPanel(ids, info){
   if(last) msg.textContent = "Last sent "+new Date(last.at).toLocaleString()+". Sending again adds your new attempt.";
   bt.addEventListener("click", async ()=>{
     bt.disabled = true;
-    try{ const n = await sendClips(ids, info, (k,t)=>{ bt.textContent = "Sending "+Math.min(k+1,t)+" of "+t+"…"; }); bt.textContent = "Sent ✓"; msg.textContent = n+" recording"+(n>1?"s":"")+" saved. AI feedback appears in My feedback after the next scoring run, then your teacher adds a score."; toast("Sent to your teacher."); }
+    try{ const n = await sendClips(ids, info, (k,t)=>{ bt.textContent = "Sending "+Math.min(k+1,t)+" of "+t+"…"; }); bt.textContent = "Sent ✓"; msg.textContent = n+" recording"+(n>1?"s":"")+" saved. AI feedback appears in Your feedback on the Dashboard after the next scoring run, then your teacher adds a score."; toast("Sent to your teacher."); }
     catch(e){ bt.textContent = "Send my recordings to my teacher"; msg.textContent = e.message; toast(e.message); }
     finally{ bt.disabled = false; }
   });
@@ -8384,7 +8384,7 @@ function rubricTable(id){
 /* ---------------- views ---------------- */
 let VIEW = {name:"home"};
 const root = document.getElementById("app");
-function go(v){ clearTimers(); onSaveHook = null; if(v && v.name==="tutorials") v = {name:"guides",part:"tutorials"}; if(v && v.name==="rubrics") v = {name:"guides",part:"rubrics",tab:v.tab}; if(v && v.name==="progress") v = {name:"home", anchor:"share"}; VIEW = v; if(v.sec){ S.last = {sec:v.sec, day:v.day}; save(); } render(); const el = v.anchor && document.getElementById(v.anchor); if(el){ if(el.tagName==="DETAILS") el.open = true; el.scrollIntoView(); } else window.scrollTo(0,0); }
+function go(v){ clearTimers(); onSaveHook = null; if(v && v.name==="tutorials") v = {name:"guides",part:"tutorials"}; if(v && v.name==="rubrics") v = {name:"guides",part:"rubrics",tab:v.tab}; if(v && v.name==="progress") v = {name:"home", anchor:"share"}; if(v && v.name==="feedback") v = {name:"home", anchor:"feedback"}; VIEW = v; if(v.sec){ S.last = {sec:v.sec, day:v.day}; save(); } render(); const el = v.anchor && document.getElementById(v.anchor); if(el){ if(el.tagName==="DETAILS") el.open = true; el.scrollIntoView(); } else window.scrollTo(0,0); }
 
 /* ---------------- Teacher: Students tab ---------------- */
 const STU = {rows:null, sel:null, err:"", loading:false};
@@ -8443,7 +8443,7 @@ function viewStudents(){
   return h("main",{class:"page"}, top, list.length? h("div",{class:"stack",style:"gap:8px"}, ...list) : h("p",{class:"muted"},"No students have signed in yet."));
 }
 function navBar(){
-  const items = [["home","Dashboard"],["reading","Reading"],["listening","Listening"],["writing","Writing"],["speaking","Speaking"],["sim","Test Simulator"],["feedback","My feedback"],["guides","Guides"],...((S.account&&S.account.role==="teacher")? [["students","Students"]] : []),["teacher","Teacher guide"]];
+  const items = [["home","Dashboard"],["reading","Reading"],["listening","Listening"],["writing","Writing"],["speaking","Speaking"],["sim","Test Simulator"],["guides","Guides"],...((S.account&&S.account.role==="teacher")? [["students","Students"]] : []),["teacher","Teacher guide"]];
   const cur = VIEW.sec || ((VIEW.name==="tutorial")? "guides" : (VIEW.name==="simrun"||VIEW.name==="simreport")? "sim" : VIEW.name);
   return h("header",{class:"bar"}, h("div",{class:"bar-in"},
     h("button",{class:"brand",onclick:()=>go({name:"home"}),"aria-label":"StratSix dashboard"}, brandMark(), h("span",{class:"brand-name"},"StratSix", h("span",null,"· iBT"))),
@@ -8531,7 +8531,7 @@ function viewHome(){
       h("div",{class:"summit-in"},
         h("div",{class:"eyebrow"}, cap(next.sec)+" · Camp "+nd.n+" of 17"), hello,
         h("p",null,"Each section is a 17-day climb to Band 6. Finish every activity of a day to reach the next camp, and bring your questions to class."),
-        h("div",{class:"row",style:"margin-top:18px"}, h("button",{class:"btn red",onclick:()=>go({name:"sec",sec:nd?next.sec:"reading",day:nd.n})}, "Continue the climb: "+cap(next.sec)+" · Day "+nd.n), h("button",{class:"btn outline",onclick:()=>go({name:"feedback"})},"My feedback")),
+        h("div",{class:"row",style:"margin-top:18px"}, h("button",{class:"btn red",onclick:()=>go({name:"sec",sec:nd?next.sec:"reading",day:nd.n})}, "Continue the climb: "+cap(next.sec)+" · Day "+nd.n), h("button",{class:"btn outline",onclick:()=>go({name:"feedback"})},"Your feedback")),
         h("div",{class:"camps-legend small"}, h("span",null, h("i",{class:"lg done"}),"Done"), h("span",null, h("i",{class:"lg cur"}),"Today"), h("span",null, h("i",{class:"lg mock"}),"Mock test unlocks"), h("span",null,"Bands 1–6 in half bands · B2 ≈ 4–4.5 · C1 ≈ 5–5.5")))),
     h("div",{class:"panel stack namebox"}, h("div",{class:"eyebrow"},"My account"), h("div",null, h("b",{style:"font-size:1.1rem"}, (S.account&&S.account.name)||S.name||"Teacher preview"), h("div",{class:"small muted mono"}, (S.account&&S.account.email)||"")),
       signedIn() ? h("div",{class:"row"}, h("span",{class:"pill ok"},"Signed in with Google"), h("button",{class:"btn ghost sm",type:"button",onclick:signOutGoogle},"Sign out")) : null,
@@ -8549,7 +8549,7 @@ function viewHome(){
   const P = progressPanels();
   const results = h("section",{id:"results",class:"stack",style:"margin-top:16px"}, h("div",{class:"eyebrow"},"Your results"), h("h2",null,"How you are doing"), P.etsPanel, P.accuracy);
   const more = h("details",{id:"share",class:"panel",style:"margin-top:16px"}, h("summary",{class:"q",style:"cursor:pointer"},"Share a report, back up, and audio settings"), h("div",{class:"stack",style:"margin-top:12px"}, P.send, P.backup));
-  return h("main",{class:"page"}, hero, cards, results, accessPanel(), h("div",{class:"two",style:"margin-top:16px"}, fmtT, week), more);
+  return h("main",{class:"page"}, hero, cards, feedbackBlock(), results, accessPanel(), h("div",{class:"two",style:"margin-top:16px"}, fmtT, week), more);
 }
 function dayMinutes(d){ const m = d.stages.reduce((a,s)=>a+(s.mins||0),0); return m || d.minutes || 60; }
 function durText(m){ const hh = Math.floor(m/60), mm = m%60; return hh? hh+" h"+(mm? " "+mm+" min":"") : mm+" min"; }
@@ -8843,16 +8843,22 @@ function fbCard(it){
     it.transcript? h("details",{class:"small"}, h("summary",{style:"cursor:pointer"},"What we heard"), h("div",{class:"rec-heard",style:"margin-top:6px"}, it.transcript)) : null,
     h("div",{class:"small muted"},"AI scores are practice estimates, not official TOEFL scores. Your teacher's score is the reference."));
 }
-function viewFeedback(){
+const FB = {items:null, t:0};
+function feedbackBlock(){
   const list = h("div",{class:"grid",style:"grid-template-columns:repeat(auto-fill,minmax(min(100%,340px),1fr))"});
   const status = h("p",{class:"muted"},"Loading your feedback…");
-  const filt = h("select",{class:"input",id:"fb-filter",style:"max-width:220px"}, h("option",{value:""},"All sections"), h("option",null,"Speaking"), h("option",null,"Writing"));
-  let items = [];
-  function draw(){ list.innerHTML = ""; const f = filt.value; const shown = items.filter(x=>!f || x.section===f); shown.forEach(it=>list.append(fbCard(it))); status.textContent = shown.length? shown.length+" response"+(shown.length>1?"s":"") : "Nothing here yet. Send a speaking set or a writing task to see feedback here."; status.hidden = false; }
+  const filt = h("select",{class:"input",id:"fb-filter",style:"max-width:220px","aria-label":"Filter feedback by section"}, h("option",{value:""},"All sections"), h("option",null,"Speaking"), h("option",null,"Writing"));
+  const more = h("button",{class:"btn ghost sm",type:"button",hidden:true});
+  let showAll = false;
+  function draw(){ list.innerHTML = ""; const f = filt.value; const all = (FB.items||[]).filter(x=>!f || x.section===f); const shown = showAll? all : all.slice(0,4); shown.forEach(it=>list.append(fbCard(it)));
+    status.textContent = all.length? all.length+" response"+(all.length>1?"s":"") : "Nothing here yet. Send a speaking set or a writing task to see feedback here.";
+    more.hidden = all.length<=4; more.textContent = showAll? "Show fewer" : "Show all "+all.length; }
+  more.addEventListener("click",()=>{ showAll = !showAll; draw(); });
   filt.addEventListener("change", draw);
   if(!signedIn()) status.textContent = "Sign in with Google to see your feedback.";
-  else ssGet({action:"feedback"}).then(j=>{ items = j.items||[]; draw(); }).catch(e=>{ status.textContent = e.message; });
-  return h("main",{class:"page stack"}, h("div",{class:"row",style:"justify-content:space-between"}, h("div",null, h("div",{class:"eyebrow"},"AI estimate · teacher score"), h("h1",null,"My feedback")), filt), status, list);
+  else if(FB.items && Date.now()-FB.t < 30000) draw();
+  else ssGet({action:"feedback"}).then(j=>{ FB.items = j.items||[]; FB.t = Date.now(); draw(); }).catch(e=>{ status.textContent = e.message; });
+  return h("section",{id:"feedback",class:"stack",style:"margin-top:16px"}, h("div",{class:"row",style:"justify-content:space-between;align-items:end;flex-wrap:wrap;gap:8px"}, h("div",null, h("div",{class:"eyebrow"},"AI estimate · teacher score"), h("h2",null,"Your feedback")), filt), status, list, more);
 }
 function teacherReview(){
   const keyIn = {value:""}; let tkey = "";
@@ -8881,7 +8887,7 @@ function teacherReview(){
   showAll.addEventListener("change", load);
   const loadB = h("button",{class:"btn primary sm",type:"button",onclick:load},"Load queue");
   if(S.account && S.account.role==="teacher") setTimeout(load, 0);
-  return h("div",{class:"panel stack",style:"margin-top:16px"}, h("div",{class:"eyebrow"},"StratSix"), h("h2",null,"Review queue"), h("p",{class:"small muted"},"Recordings and writing sent from StratSix, with Claude's AI estimate. Add your own score and it appears in the student's My feedback."),
+  return h("div",{class:"panel stack",style:"margin-top:16px"}, h("div",{class:"eyebrow"},"StratSix"), h("h2",null,"Review queue"), h("p",{class:"small muted"},"Recordings and writing sent from StratSix, with Claude's AI estimate. Add your own score and it appears in the student's feedback on the Dashboard."),
     h("div",{class:"row"}, (signedIn()? h("span",{class:"pill ok"}, "Signed in as "+S.account.email+(S.account.role==="teacher"? " (teacher)" : " (not a teacher account)")) : h("button",{class:"btn sm",type:"button",onclick:googleSignIn},"Sign in with Google")), loadB, h("label",{for:"tq-all",class:"small row",style:"gap:6px"}, showAll, "Include scored")), status,
     h("div",{class:"tq-grid"}, qbox, detail));
 }
@@ -9056,7 +9062,7 @@ function simSentNote(A, kind, n, T){
   const parts = kind==="writing"? ["email","disc"] : ["lr","iv"];
   const ok = parts.every(p=>st[p] && !String(st[p]).startsWith("error"));
   const err = parts.map(p=>st[p]).find(x=>x && String(x).startsWith("error"));
-  const msg = h("div",{class:"small"}, ok? "Sent automatically to your Drive folder when you finished. AI feedback appears in My feedback after the next scoring run." : err? "Not sent: "+String(err).slice(7) : "Not sent yet.");
+  const msg = h("div",{class:"small"}, ok? "Sent automatically to your Drive folder when you finished. AI feedback appears in Your feedback on the Dashboard after the next scoring run." : err? "Not sent: "+String(err).slice(7) : "Not sent yet.");
   const retry = ok? null : h("button",{class:"btn sm red",type:"button",onclick:()=>{ parts.forEach(p=>simAutoSend(n, T, A, kind, p)); msg.textContent = "Sending… check again in a minute."; }},"Send now");
   return h("div",{class:"why"}, h("b",null, kind==="writing"? "Sent to your teacher. " : "Your recordings. "), msg, retry? h("div",{class:"row",style:"margin-top:8px"}, retry) : null);
 }
@@ -9846,7 +9852,6 @@ function render(){
   else if(VIEW.name==="tutorial") v = viewTutorial();
   else if(VIEW.name==="teacher") v = viewTeacher();
   else if(VIEW.name==="students") v = viewStudents();
-  else if(VIEW.name==="feedback") v = viewFeedback();
   else if(VIEW.name==="sim") v = viewSim();
   else if(VIEW.name==="simreport") v = viewSimReport();
   else v = viewHome();
@@ -9855,7 +9860,7 @@ function render(){
   const cur = root.querySelector('.nav [aria-current="page"]'); if(cur && cur.scrollIntoView){ try{ cur.scrollIntoView({block:"nearest",inline:"center"}); }catch(e){} }
 }
 const tok = (location.hash||"").slice(1);
-if(SECS.includes(tok)) VIEW = {name:"sec",sec:tok,day:lastDay(tok)}; else if(tok==="rubrics"||tok==="tutorials") VIEW={name:"guides",part:tok}; else if(["teacher","sim","feedback"].includes(tok)) VIEW={name:tok};
+if(SECS.includes(tok)) VIEW = {name:"sec",sec:tok,day:lastDay(tok)}; else if(tok==="rubrics"||tok==="tutorials") VIEW={name:"guides",part:tok}; else if(["teacher","sim"].includes(tok)) VIEW={name:tok};
 render();
 if(SB){
   SB.auth.getSession().then(r=>{ const ses = r && r.data && r.data.session; if(ses){ return adoptSession(ses).then(ok=>{ if(ok){ render(); refreshAccess(); } }); } else if(S.account && S.account.uid){ S.account = Object.assign({}, S.account, {uid:"", role:""}); save(); render(); } }).catch(()=>{});
