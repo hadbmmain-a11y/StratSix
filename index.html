@@ -8384,7 +8384,7 @@ function rubricTable(id){
 /* ---------------- views ---------------- */
 let VIEW = {name:"home"};
 const root = document.getElementById("app");
-function go(v){ clearTimers(); onSaveHook = null; if(v && v.name==="progress") v = {name:"home", anchor:"share"}; VIEW = v; if(v.sec){ S.last = {sec:v.sec, day:v.day}; save(); } render(); const el = v.anchor && document.getElementById(v.anchor); if(el){ if(el.tagName==="DETAILS") el.open = true; el.scrollIntoView(); } else window.scrollTo(0,0); }
+function go(v){ clearTimers(); onSaveHook = null; if(v && v.name==="tutorials") v = {name:"guides",part:"tutorials"}; if(v && v.name==="rubrics") v = {name:"guides",part:"rubrics",tab:v.tab}; if(v && v.name==="progress") v = {name:"home", anchor:"share"}; VIEW = v; if(v.sec){ S.last = {sec:v.sec, day:v.day}; save(); } render(); const el = v.anchor && document.getElementById(v.anchor); if(el){ if(el.tagName==="DETAILS") el.open = true; el.scrollIntoView(); } else window.scrollTo(0,0); }
 
 /* ---------------- Teacher: Students tab ---------------- */
 const STU = {rows:null, sel:null, err:"", loading:false};
@@ -8443,8 +8443,8 @@ function viewStudents(){
   return h("main",{class:"page"}, top, list.length? h("div",{class:"stack",style:"gap:8px"}, ...list) : h("p",{class:"muted"},"No students have signed in yet."));
 }
 function navBar(){
-  const items = [["home","Dashboard"],["reading","Reading"],["listening","Listening"],["writing","Writing"],["speaking","Speaking"],["sim","Test Simulator"],["feedback","My feedback"],["tutorials","Tutorials"],["rubrics","Rubrics"],...((S.account&&S.account.role==="teacher")? [["students","Students"]] : []),["teacher","Teacher guide"]];
-  const cur = VIEW.sec || (VIEW.name==="tutorial"? "tutorials" : (VIEW.name==="simrun"||VIEW.name==="simreport")? "sim" : VIEW.name);
+  const items = [["home","Dashboard"],["reading","Reading"],["listening","Listening"],["writing","Writing"],["speaking","Speaking"],["sim","Test Simulator"],["feedback","My feedback"],["guides","Guides"],...((S.account&&S.account.role==="teacher")? [["students","Students"]] : []),["teacher","Teacher guide"]];
+  const cur = VIEW.sec || ((VIEW.name==="tutorial")? "guides" : (VIEW.name==="simrun"||VIEW.name==="simreport")? "sim" : VIEW.name);
   return h("header",{class:"bar"}, h("div",{class:"bar-in"},
     h("button",{class:"brand",onclick:()=>go({name:"home"}),"aria-label":"StratSix dashboard"}, brandMark(), h("span",{class:"brand-name"},"StratSix", h("span",null,"· iBT"))),
     h("nav",{class:"nav","aria-label":"Main"}, ...items.map(([k,l])=>h("button",{"aria-current":cur===k?"page":null,onclick:()=> SECS.includes(k)? go({name:"sec",sec:k,day:lastDay(k)}) : go({name:k})}, l)))
@@ -8678,12 +8678,21 @@ function viewHard(){
 
 function viewTutorials(){
   const groups = ["reading","listening","writing","speaking"];
-  return h("main",{class:"page"}, h("div",{class:"stack",style:"margin-bottom:16px"}, h("div",{class:"eyebrow"},"Narrated lessons"), h("h1",null,"Tutorials"), h("p",{class:"muted",style:"max-width:70ch"},"One short animated tutorial for each of the 12 TOEFL task types. Each one shows the task, the strategy step by step, and a worked example. Watch it before you practice the task, and rewatch it any time.")),
+  return h("div",null, h("div",{class:"stack",style:"margin-bottom:16px"}, h("div",{class:"eyebrow"},"Narrated lessons"), h("h2",null,"Tutorials"), h("p",{class:"muted",style:"max-width:70ch"},"One short animated tutorial for each of the 12 TOEFL task types. Each one shows the task, the strategy step by step, and a worked example. Watch it before you practice the task, and rewatch it any time.")),
     ...groups.map(g=>h("div",{class:"stack",style:"margin-bottom:18px"}, h("h2",null,cap(g)), h("div",{class:"tu-lib"}, ...Object.values(BS.tutorials).filter(t=>t.sec===g).map(t=>h("button",{class:"tu-card",onclick:()=>go({name:"tutorial",id:t.id})}, h("span",{class:"ic",html:ICON.play}), h("b",null,t.task), h("span",{class:"small muted"}, t.mins+" min · "+t.ch.length+" chapters"), h("span",{class:"pill "+(S.tut[t.id]?"ok":"plain"),style:"align-self:flex-start"}, S.tut[t.id]? "Watched":"Not watched")))))));
 }
 function viewTutorial(){
-  const t = BS.tutorials[VIEW.id]; if(!t) return viewTutorials();
-  return h("main",{class:"page"}, h("div",{class:"stack",style:"margin-bottom:12px"}, h("button",{class:"btn ghost sm",style:"align-self:flex-start",onclick:()=>go({name:"tutorials"})},"← All tutorials"), h("div",{class:"eyebrow"}, cap(t.sec)+" · "+t.mins+" min"), h("h1",null,t.task)), h("div",{style:"max-width:1000px"}, tutorialPlayer(t, "lib-"+t.id)));
+  const t = BS.tutorials[VIEW.id]; if(!t) return viewGuides();
+  return h("main",{class:"page"}, h("div",{class:"stack",style:"margin-bottom:12px"}, h("button",{class:"btn ghost sm",style:"align-self:flex-start",onclick:()=>go({name:"guides",part:"tutorials"})},"← All tutorials"), h("div",{class:"eyebrow"}, cap(t.sec)+" · "+t.mins+" min"), h("h1",null,t.task)), h("div",{style:"max-width:1000px"}, tutorialPlayer(t, "lib-"+t.id)));
+}
+function viewGuides(){
+  let part = VIEW.part || "tutorials";
+  const box = h("div",{style:"margin-top:16px"});
+  const tabs = [["tutorials","Tutorials"],["rubrics","Rubrics"]];
+  function draw(){ box.innerHTML = ""; box.append(part==="rubrics"? viewRubrics() : viewTutorials()); }
+  const tb = h("div",{class:"tabs",role:"tablist"}, ...tabs.map(([k,l])=>{ const b = h("button",{role:"tab","aria-selected":k===part?"true":"false"}, l); b.addEventListener("click",()=>{ part = k; VIEW.part = k; [...tb.children].forEach(x=>x.setAttribute("aria-selected","false")); b.setAttribute("aria-selected","true"); draw(); }); return b; }));
+  draw();
+  return h("main",{class:"page"}, h("div",{class:"stack",style:"margin-bottom:12px"}, h("div",{class:"eyebrow"},"Learn and self-check"), h("h1",null,"Guides"), h("p",{class:"muted",style:"max-width:70ch"},"Watch a narrated tutorial for each task type, or check the scoring guides (rubrics) your teacher uses to judge your writing and speaking.")), tb, box);
 }
 function viewRubrics(){
   const tabs = [["official","Test scoring guides (0–5)"],["interview","Interview (analytic)"],["repeat","Listen and Repeat"],["fluency","Fluency markers"],["email","Write an Email"],["discussion","Academic Discussion"]];
@@ -8697,7 +8706,7 @@ function viewRubrics(){
   }
   const tb = h("div",{class:"tabs",role:"tablist"}, ...tabs.map(([k,l])=>{ const b = h("button",{role:"tab","aria-selected":k===cur?"true":"false"}, l); b.addEventListener("click",()=>{ cur=k; VIEW.tab=k; [...tb.children].forEach(x=>x.setAttribute("aria-selected","false")); b.setAttribute("aria-selected","true"); draw(); }); return b; }));
   draw();
-  return h("main",{class:"page"}, h("div",{class:"stack",style:"margin-bottom:16px"}, h("div",{class:"eyebrow"},"Scoring guides"), h("h1",null,"Rubrics"), h("p",{class:"muted",style:"max-width:70ch"},"These rubrics use the same 0–5 task scale as the TOEFL iBT Writing and Speaking tasks, rewritten as plain “I can” statements so you can judge your own recordings and drafts. Your teacher uses the same wording in class.")), tb, body);
+  return h("div",null, h("div",{class:"stack",style:"margin-bottom:16px"}, h("div",{class:"eyebrow"},"Scoring guides"), h("h2",null,"Rubrics"), h("p",{class:"muted",style:"max-width:70ch"},"These rubrics use the same 0–5 task scale as the TOEFL iBT Writing and Speaking tasks, rewritten as plain “I can” statements so you can judge your own recordings and drafts. Your teacher uses the same wording in class.")), tb, body);
 }
 
 function buildReport(){
@@ -9833,8 +9842,7 @@ function render(){
   let v;
   if(VIEW.name==="sec") v = viewSection();
   else if(VIEW.name==="hard") v = viewHard();
-  else if(VIEW.name==="rubrics") v = viewRubrics();
-  else if(VIEW.name==="tutorials") v = viewTutorials();
+  else if(VIEW.name==="guides") v = viewGuides();
   else if(VIEW.name==="tutorial") v = viewTutorial();
   else if(VIEW.name==="teacher") v = viewTeacher();
   else if(VIEW.name==="students") v = viewStudents();
@@ -9847,7 +9855,7 @@ function render(){
   const cur = root.querySelector('.nav [aria-current="page"]'); if(cur && cur.scrollIntoView){ try{ cur.scrollIntoView({block:"nearest",inline:"center"}); }catch(e){} }
 }
 const tok = (location.hash||"").slice(1);
-if(SECS.includes(tok)) VIEW = {name:"sec",sec:tok,day:lastDay(tok)}; else if(["rubrics","teacher","sim","feedback"].includes(tok)) VIEW={name:tok};
+if(SECS.includes(tok)) VIEW = {name:"sec",sec:tok,day:lastDay(tok)}; else if(tok==="rubrics"||tok==="tutorials") VIEW={name:"guides",part:tok}; else if(["teacher","sim","feedback"].includes(tok)) VIEW={name:tok};
 render();
 if(SB){
   SB.auth.getSession().then(r=>{ const ses = r && r.data && r.data.session; if(ses){ return adoptSession(ses).then(ok=>{ if(ok){ render(); refreshAccess(); } }); } else if(S.account && S.account.uid){ S.account = Object.assign({}, S.account, {uid:"", role:""}); save(); render(); } }).catch(()=>{});
