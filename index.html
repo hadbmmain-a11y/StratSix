@@ -8857,13 +8857,21 @@ function teacherReview(){
     h("div",{class:"row"}, (signedIn()? h("span",{class:"pill ok"}, "Signed in as "+S.account.email+(S.account.role==="teacher"? " (teacher)" : " (not a teacher account)")) : h("button",{class:"btn sm",type:"button",onclick:googleSignIn},"Sign in with Google")), loadB, h("label",{for:"tq-all",class:"small row",style:"gap:6px"}, showAll, "Include scored")), status,
     h("div",{class:"tq-grid"}, qbox, detail));
 }
+function courseMap(){
+  let cur = SECS[0];
+  const body = h("div",{class:"tbl-wrap"});
+  function draw(){ body.innerHTML = ""; body.append(h("table",{class:"format-table"}, h("thead",null,h("tr",null,h("th",null,"Day"),h("th",null,"Title"),h("th",null,"Task focus"),h("th",null,"Live class"))), h("tbody",null, ...BS.sections[cur].days.map(d=>h("tr",null, h("td",{class:"mono"},String(d.n)), h("td",null,d.title), h("td",{class:"muted"},d.task), h("td",{class:"muted small",html:d.live? d.live.replace(/<[^>]+>/g,"").split(".")[0] : "–"})))))); }
+  const tb = h("div",{class:"tabs",role:"tablist"}, ...SECS.map(sec=>{ const b = h("button",{role:"tab","aria-selected":sec===cur?"true":"false"}, cap(sec)); b.addEventListener("click",()=>{ cur = sec; [...tb.children].forEach(x=>x.setAttribute("aria-selected","false")); b.setAttribute("aria-selected","true"); draw(); }); return b; }));
+  draw();
+  return h("div",{class:"panel stack",style:"margin-top:16px"}, h("h2",null,"Course map"), h("p",{class:"muted small"},"The last column shows the ETS TOEFL iBT® lesson plan that matches each live class. StratSix does not reproduce the lesson plans."), tb, body);
+}
 function viewTeacher(){
   const T = BS.teacher;
   return h("main",{class:"page"}, h("div",{class:"stack",style:"margin-bottom:16px"}, h("div",{class:"eyebrow"},"For the instructor"), h("h1",null,"Teacher guide"), h("div",{class:"prose muted",html:T.intro})),
     h("div",{class:"two"}, h("div",{class:"panel stack"}, h("h2",null,"Running the course"), h("ol",{class:"steps"}, ...T.steps.map(r=>h("li",null,h("div",null,h("b",null,r[0]),h("span",{html:r[1]})))))), h("div",{class:"panel stack"}, h("h2",null,"Collecting student work"), h("div",{class:"prose",html:T.collect}))),
     teacherPanel(), S.teacher? teacherReview() : null, driveStatus(), S.teacher? accessTool() : null, S.teacher? unlockTool() : null,
     S.teacher? plansPanel() : h("div",{class:"panel",style:"margin-top:16px"}, h("h2",null,"Lesson plans (PDF)"), h("p",{class:"muted small"},"Turn on preview mode above with your teacher PIN to download the lesson plans for every class.")),
-    h("div",{class:"panel stack",style:"margin-top:16px"}, h("h2",null,"Course map"), h("p",{class:"muted small"},"The last column shows the ETS TOEFL iBT® lesson plan that matches each live class. StratSix does not reproduce the lesson plans."), ...SECS.map(sec=>h("div",{class:"stack"}, h("h3",null,cap(sec)), h("div",{class:"tbl-wrap"}, h("table",{class:"format-table"}, h("thead",null,h("tr",null,h("th",null,"Day"),h("th",null,"Title"),h("th",null,"Task focus"),h("th",null,"Live class"))), h("tbody",null, ...BS.sections[sec].days.map(d=>h("tr",null, h("td",{class:"mono"},String(d.n)), h("td",null,d.title), h("td",{class:"muted"},d.task), h("td",{class:"muted small",html:d.live? d.live.replace(/<[^>]+>/g,"").split(".")[0] : "–"}))))))))));
+    courseMap());
 }
 
 /* ======================= TEST SIMULATOR ======================= */
