@@ -5,7 +5,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%277%27 fill=%27%230B3B3A%27/%3E%3Cpath d=%27M4 25 13 12l4 5 4-7 7 15z%27 fill=%27%23EAF6F2%27/%3E%3Cpath d=%27M21 10V4l5 2-5 2%27 fill=%27%23F2C14E%27/%3E%3C/svg%3E">
-</head><body>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script></head><body>
 <style>
 /* Layout: StratSix · ivory study desk under a navy summit bar; dashboard opens on the 17-camp route to Band 6. */
 :root{
@@ -678,7 +678,7 @@ BS.teacher = {
     ["Collect reports","Students copy or download their report from My progress and send it to you. Writing texts are included in full."],
     ["Run the mocks","Day 16 of each section is an adaptive mock. Module 1 routes students to an upper or lower Module 2, as on the real test."]
   ],
-  collect:"<p><b>Google Drive.</b> Each student registers with their full name and Google email, then presses <b>Create my Drive folder</b> on the dashboard. Your BandSix Drive script creates <i>BandSix Students / Full Name</i> with <i>Speaking recordings</i>, <i>Writing</i> and a <i>Writing portfolio</i> document, shares it with the student, and adds them to the <b>BandSix Roster</b> sheet. Recordings sent with <b>Send to my Drive folder</b> are renamed automatically (Name_Speaking-Day06_Task_date). Writing sent with <b>Copy &amp; send to my portfolio</b> is added to the end of the portfolio document. Every submission appears in the <b>Submissions</b> tab of the roster, so you can check who sent what each day.</p><p>Progress is saved in each student’s browser. To see their scores, ask them to open <b>My progress</b> and either:</p><ul><li><b>Copy report</b> and paste it into WhatsApp or email, or</li><li><b>Download report</b> to send an HTML file.</li></ul><p>For speaking, students record on their phone while the page plays the prompts and runs the timer. Ask them to send the audio file together with the report. Their self-scores on the four interview criteria are in the report, so you can compare them with your own score. The gap between the two is useful feedback in itself.</p><p>A student who changes device can copy a <b>backup code</b> and restore it on the new device.</p><p><b>Speaking scores.</b> On Speaking Days 1, 6, 15 and 16, students score their full set (7 Listen and Repeat + 4 interview responses) with the StratSix scoring guides (0–5, the same task scale as the test). When you receive the recording, turn on preview mode, open the scoring tool below, give each response 0–5, add feedback and press <i>Create score code</i>. Send the message to the student; when they paste the code on that day, they see your scores next to theirs and an estimated band.</p>"
+  collect:"<p><b>Student accounts and submissions.</b> Each student signs in with their Google account. StratSix stores their recordings, writing and scores securely in Supabase. Recordings sent with <b>Send my recordings to my teacher</b> and writing sent with <b>Send for AI feedback</b> appear in the <b>Review queue</b> below (sign in with your teacher Google account), where you add your own score and note. The student sees your score in <b>My feedback</b>.</p><p>Progress is saved in each student’s browser. To see their scores, ask them to open <b>My progress</b> and either:</p><ul><li><b>Copy report</b> and paste it into WhatsApp or email, or</li><li><b>Download report</b> to send an HTML file.</li></ul><p>For speaking, students record on their phone while the page plays the prompts and runs the timer. Ask them to send the audio file together with the report. Their self-scores on the four interview criteria are in the report, so you can compare them with your own score. The gap between the two is useful feedback in itself.</p><p>A student who changes device can copy a <b>backup code</b> and restore it on the new device.</p><p><b>Speaking scores.</b> On Speaking Days 1, 6, 15 and 16, students score their full set (7 Listen and Repeat + 4 interview responses) with the StratSix scoring guides (0–5, the same task scale as the test). When you receive the recording, turn on preview mode, open the scoring tool below, give each response 0–5, add feedback and press <i>Create score code</i>. Send the message to the student; when they paste the code on that day, they see your scores next to theirs and an estimated band.</p>"
 };
 
 /* ---------------- StratSix speaking scoring guides (0–5 task scale; original wording) ---------------- */
@@ -7323,6 +7323,30 @@ const TEACHER_PIN = "BS2026";
 /* Google Drive connector (Apps Script web app). Fill both values after the teacher deploys StratSix-Drive.gs. */
 const DRIVE_APP = { url: "https://script.google.com/macros/s/AKfycbzrC0TB5waVY4iIwj6GpE85YzgdkxSX_ZFe6KxFubduUrLnnaKOWkzwqcqToTe9CKRE/exec", code: "XUKGSTDR" };
 
+/* ---------------- Supabase backend (accounts, submissions, recordings, teacher scores) ----------------
+   The publishable key is public by design. What each person can read or write is limited by row-level security in the database. */
+const SB_CFG = {url:"https://nwwvzaajkuleympraqgo.supabase.co", key:"sb_publishable_uS2PovSsU0Rq8Gi0gXejBQ_dJF-UX_N"};
+let SB = null;
+try{ if(window.supabase && window.supabase.createClient) SB = window.supabase.createClient(SB_CFG.url, SB_CFG.key, {auth:{persistSession:true, autoRefreshToken:true, detectSessionInUrl:true, flowType:"pkce"}}); }catch(e){ SB = null; }
+function sbOn(){ return !!SB; }
+function signedIn(){ return !!(S.account && S.account.uid); }
+function sbErr(e){ const m = String((e && e.message) || e || ""); if(/row-level security|permission|not allowed/i.test(m)) return "You do not have permission to do that."; if(/Failed to fetch|NetworkError|network/i.test(m)) return "No connection. Check your internet and try again."; return m || "Not saved. Try again."; }
+async function adoptSession(session){
+  const u = session && session.user; if(!u) return false;
+  const meta = u.user_metadata || {}; const prev = S.account || {};
+  const name = String(meta.full_name || meta.name || prev.name || S.name || "").replace(/\s+/g," ").trim();
+  let role = "student";
+  try{ const r = await SB.from("profiles").select("role").eq("id", u.id).maybeSingle(); if(r && r.data && r.data.role) role = r.data.role; }catch(e){}
+  S.account = Object.assign({}, prev, {name, email:String(u.email||"").toLowerCase(), uid:u.id, role, created:prev.created || new Date().toISOString()});
+  if(name) S.name = name;
+  save(); return true;
+}
+function googleSignIn(){
+  if(!SB){ toast("Sign-in is not available right now. Check your internet connection and reload the page."); return; }
+  SB.auth.signInWithOAuth({provider:"google", options:{redirectTo: location.origin+location.pathname, queryParams:{prompt:"select_account"}}}).then(r=>{ if(r && r.error) toast(sbErr(r.error)); });
+}
+async function signOutGoogle(){ try{ if(SB) await SB.auth.signOut(); }catch(e){} if(S.account){ S.account = Object.assign({}, S.account, {uid:"", role:""}); } save(); render(); }
+
 /* ---------------- helpers ---------------- */
 function h(tag, attrs, ...kids){
   const el = document.createElement(tag);
@@ -7798,14 +7822,14 @@ R.write = (b, ctx) => {
   sendBtn.addEventListener("click", async ()=>{
     if(words(ta.value)<10){ toast("Write your response first."); return; }
     sendBtn.disabled = true; sendBtn.textContent = "Sending…";
-    try{ const w = S.work[key]||{}; await ssPost({action:"writing", section:"Writing", day:key.split("-")[1], task:taskName, prompt:wPrompt, text:ta.value, words:words(ta.value), selfScore:w.rubric||null}); logSub({kind:"writing", key, day:key.split("-")[1], task:taskName}); sendBtn.textContent = "Sent ✓"; sendMsg.textContent = "Saved in your Writing portfolio. AI feedback appears in My feedback after the next scoring run, then your teacher adds a score."; toast("Sent to your Drive folder."); }
+    try{ const w = S.work[key]||{}; await ssPost({action:"writing", section:"Writing", day:key.split("-")[1], task:taskName, prompt:wPrompt, text:ta.value, words:words(ta.value), selfScore:w.rubric||null}); logSub({kind:"writing", key, day:key.split("-")[1], task:taskName}); sendBtn.textContent = "Sent ✓"; sendMsg.textContent = "Saved. AI feedback appears in My feedback after the next scoring run, then your teacher adds a score."; toast("Sent to your teacher."); }
     catch(e){ sendBtn.textContent = "Send for AI feedback"; sendMsg.textContent = e.message; toast(e.message); }
     finally{ sendBtn.disabled = false; }
   });
   after.append(h("h4",null,"4. Send for AI feedback"));
-  after.append(driveOn() && S.account
-    ? h("div",{class:"why"}, h("b",null,"Send to your teacher. "), "Your response goes to your Writing portfolio in Drive. Claude scores it at the next scoring run and your teacher adds a score.", h("div",{class:"send-panel",style:"margin-top:8px"}, h("div",{class:"row"}, sendBtn, h("button",{class:"btn sm",type:"button",onclick:()=>copyText(portfolio(), null, "Copied.")},"Copy only")), sendMsg))
-    : h("div",{class:"why"}, h("b",null,"Save to your portfolio. "), "Copy your response with its header, open your Drive folder and paste it at the end of your Writing portfolio document.", h("div",{class:"row",style:"margin-top:8px"}, h("button",{class:"btn sm primary",type:"button",onclick:()=>copyText(portfolio(), null, "Copied. Now paste it at the end of your Writing portfolio.")},"Copy for my portfolio"), driveBtn())));
+  after.append(signedIn()
+    ? h("div",{class:"why"}, h("b",null,"Send to your teacher. "), "Your response is saved for your teacher. Claude scores it at the next scoring run and your teacher adds a score.", h("div",{class:"send-panel",style:"margin-top:8px"}, h("div",{class:"row"}, sendBtn, h("button",{class:"btn sm",type:"button",onclick:()=>copyText(portfolio(), null, "Copied.")},"Copy only")), sendMsg))
+    : h("div",{class:"why"}, h("b",null,"Sign in to send. "), "Sign in with Google to send your response to your teacher and receive feedback.", h("div",{class:"row",style:"margin-top:8px"}, h("button",{class:"btn sm primary",type:"button",onclick:googleSignIn},"Sign in with Google"), h("button",{class:"btn sm",type:"button",onclick:()=>copyText(portfolio(), null, "Copied.")},"Copy my response"))));
   return h("div",{class:"stack"}, card, h("div",{class:"editor-foot"}, h("div",{class:"row"}, startBtn, timer), wc), ta, h("div",{class:"row"}, saved.submitted? null : doneBtn), after);
 };
 
@@ -7875,18 +7899,74 @@ const RECDB = {
 };
 
 function blobB64(blob){ return new Promise((res,rej)=>{ const r = new FileReader(); r.onload = ()=>res(String(r.result).split(",")[1]||""); r.onerror = ()=>rej(new Error("The recording could not be read.")); r.readAsDataURL(blob); }); }
+async function sbUser(){
+  if(!SB) throw new Error("The connection is not available. Reload the page.");
+  let r; try{ r = await SB.auth.getSession(); }catch(e){ throw new Error(sbErr(e)); }
+  const u = r && r.data && r.data.session && r.data.session.user;
+  if(!u) throw new Error("Sign in with Google first (Dashboard → My account).");
+  return u;
+}
 async function ssPost(payload){
-  if(!driveOn()) throw new Error("The Drive connection is not set up yet. Tell your teacher.");
-  if(!(S.account && S.account.email)) throw new Error("Register with your Google email first (Dashboard → My account).");
-  const body = JSON.stringify(Object.assign({api:"stratsix", code:DRIVE_APP.code, email:S.account.email, name:S.account.name||S.name||""}, payload));
-  let r; try{ r = await fetch(DRIVE_APP.url, {method:"POST", body}); }catch(e){ throw new Error("No connection. Check your internet and try again."); }
-  let j; try{ j = await r.json(); }catch(e){ throw new Error("Your teacher's Drive script needs the StratSix update. Tell your teacher."); }
-  if(!j || !j.ok) throw new Error((j && j.error) || "Not saved. Try again.");
-  return j;
+  const user = await sbUser(); const a = payload.action;
+  const day = (payload.day==="" || payload.day==null) ? null : Math.min(17, Math.max(1, parseInt(payload.day,10)||1));
+  const app = payload.mock ? "StratSix mock" : "StratSix";
+  const base = {user_id:user.id, day, task:String(payload.task||"").slice(0,80), app, prompt:String(payload.prompt||"").slice(0,5000)};
+  if(a==="writing"){
+    const text = String(payload.text||""); if(!text.trim()) throw new Error("Write your response first.");
+    const r = await SB.from("submissions").insert(Object.assign(base, {section:"Writing", type:"Text", response_text:text.slice(0,45000), words:payload.words||null, self_score:payload.selfScore||null})).select("id").single();
+    if(r.error) throw new Error(sbErr(r.error)); return {ok:true, row:r.data.id};
+  }
+  if(a==="recording"){
+    const blob = payload.blob; if(!blob || !blob.size) throw new Error("The recording is empty.");
+    if(blob.size > 25*1048576) throw new Error("The recording is too large. Record a shorter answer.");
+    const ext = /^\.(webm|m4a|ogg|mp3|wav|aac|mp4)$/.test(String(payload.ext||"")) ? payload.ext : ".webm";
+    const path = user.id+"/"+new Date().toISOString().replace(/[:.]/g,"-")+"_"+slug(payload.task||"Answer")+ext;
+    const up = await SB.storage.from("recordings").upload(path, blob, {contentType: payload.mime || "audio/webm", upsert:false});
+    if(up.error) throw new Error(sbErr(up.error));
+    const tr = String(payload.transcript||""); const words = (tr.match(/\S+/g)||[]).length;
+    const r = await SB.from("submissions").insert(Object.assign(base, {section:"Speaking", type:"Recording"+(tr? " + transcript" : ""), response_text:tr.slice(0,45000), words, audio_path:path})).select("id").single();
+    if(r.error) throw new Error(sbErr(r.error)); return {ok:true, row:r.data.id};
+  }
+  if(a==="teacherScore"){
+    const sc = Number(payload.score); if(!(sc>=0 && sc<=5)) throw new Error("Choose a score from 0 to 5.");
+    const r = await SB.from("submissions").update({teacher_score:sc, teacher_note:String(payload.note||"").slice(0,1000)}).eq("id", payload.row).select("id");
+    if(r.error) throw new Error(sbErr(r.error));
+    if(!r.data || !r.data.length) throw new Error("Only a teacher account can publish scores. Sign in with the teacher Google account.");
+    return {ok:true};
+  }
+  if(a==="access"){
+    const r = await SB.from("app_settings").upsert({key:"access", value:payload.cfg||{}}).select("key");
+    if(r.error) throw new Error(sbErr(r.error));
+    if(!r.data || !r.data.length) throw new Error("Only a teacher account can change module access.");
+    return {ok:true};
+  }
+  throw new Error("Unknown request.");
 }
 async function ssGet(params){
-  const r = await fetch(driveUrl(Object.assign({api:"stratsix"}, params)));
-  const j = await r.json(); if(!j || !j.ok) throw new Error((j && j.error) || "Not available."); return j;
+  const a = params.action;
+  if(a==="access"){
+    const r = await SB.from("app_settings").select("value").eq("key","access").maybeSingle();
+    return {ok:true, cfg: (r && r.data) ? r.data.value : null};
+  }
+  const user = await sbUser();
+  const cols = "id,created_at,user_id,section,day,task,words,prompt,response_text,ai_result,teacher_score,teacher_note,app,audio_path";
+  const toItem = x=>({row:x.id, time:x.created_at, section:x.section, day:x.day==null? "" : x.day, task:x.task, link:"", words:x.words, ai:x.ai_result||"", transcript:x.response_text||"", tscore:x.teacher_score==null? "" : x.teacher_score, tnote:x.teacher_note||"", mock:/mock/.test(x.app||""), prompt:x.prompt||""});
+  if(a==="feedback"){
+    const r = await SB.from("submissions").select(cols).eq("user_id", user.id).like("app","StratSix%").order("created_at",{ascending:false}).limit(200);
+    if(r.error) throw new Error(sbErr(r.error)); return {ok:true, items:(r.data||[]).map(toItem)};
+  }
+  if(a==="queue"){
+    if(!(S.account && S.account.role==="teacher")) throw new Error("Sign in with the teacher Google account to see the review queue.");
+    let q = SB.from("submissions").select(cols).like("app","StratSix%"); if(!params.all) q = q.is("teacher_score", null);
+    const r = await q.order("created_at",{ascending:false}).limit(300);
+    if(r.error) throw new Error(sbErr(r.error));
+    const rows = r.data||[]; const ids = [...new Set(rows.map(x=>x.user_id))]; const who = {};
+    if(ids.length){ const p = await SB.from("profiles").select("id,full_name,email").in("id", ids); (p.data||[]).forEach(x=>{ who[x.id] = x; }); }
+    const paths = rows.filter(x=>x.audio_path).map(x=>x.audio_path); const urls = {};
+    if(paths.length){ const sg = await SB.storage.from("recordings").createSignedUrls(paths, 3600); (sg.data||[]).forEach(x=>{ if(x && x.path && x.signedUrl) urls[x.path] = x.signedUrl; }); }
+    return {ok:true, items: rows.map(x=>Object.assign(toItem(x), {name:(who[x.user_id]&&(who[x.user_id].full_name||who[x.user_id].email))||"Student", email:(who[x.user_id]&&who[x.user_id].email)||"", link:urls[x.audio_path]||""}))};
+  }
+  throw new Error("Not available.");
 }
 function logSub(o){ S.subs = S.subs || []; S.subs.unshift(Object.assign({at:new Date().toISOString()}, o)); if(S.subs.length>400) S.subs.length = 400; save(); }
 
@@ -7898,8 +7978,7 @@ async function sendClips(ids, info, onProgress){
   let n = 0;
   for(const c of list){
     onProgress && onProgress(n, list.length);
-    const data = await blobB64(c.blob);
-    await ssPost({action:"recording", section:"Speaking", day:info.day, task:c.task || info.task, prompt:c.prompt||"", transcript:c.text||"", secs:c.secs||0, mime:c.mime, ext:REC.ext(c.mime), data, mock:!!info.mock});
+    await ssPost({action:"recording", section:"Speaking", day:info.day, task:c.task || info.task, prompt:c.prompt||"", transcript:c.text||"", secs:c.secs||0, mime:c.mime, ext:REC.ext(c.mime), blob:c.blob, mock:!!info.mock});
     c.sent = new Date().toISOString(); RECDB.put(c); n++;
   }
   onProgress && onProgress(n, list.length);
@@ -7954,7 +8033,7 @@ function sendPanel(ids, info){
   if(last) msg.textContent = "Last sent "+new Date(last.at).toLocaleString()+". Sending again adds your new attempt.";
   bt.addEventListener("click", async ()=>{
     bt.disabled = true;
-    try{ const n = await sendClips(ids, info, (k,t)=>{ bt.textContent = "Sending "+Math.min(k+1,t)+" of "+t+"…"; }); bt.textContent = "Sent ✓"; msg.textContent = n+" recording"+(n>1?"s":"")+" saved in your Drive folder. AI feedback appears in My feedback after the next scoring run, then your teacher adds a score."; toast("Sent to your Drive folder."); }
+    try{ const n = await sendClips(ids, info, (k,t)=>{ bt.textContent = "Sending "+Math.min(k+1,t)+" of "+t+"…"; }); bt.textContent = "Sent ✓"; msg.textContent = n+" recording"+(n>1?"s":"")+" saved. AI feedback appears in My feedback after the next scoring run, then your teacher adds a score."; toast("Sent to your teacher."); }
     catch(e){ bt.textContent = "Send my recordings to my teacher"; msg.textContent = e.message; toast(e.message); }
     finally{ bt.disabled = false; }
   });
@@ -7973,7 +8052,7 @@ function recorder(key, label, task){
     S.work[key]=Object.assign(S.work[key]||{}, {recording:f.name}); save();
   });
   const kp = key.split("-"); const fname = slug(S.account&&S.account.name)+"_"+cap(kp[0])+"-Day"+String(kp[1]).padStart(2,"0");
-  return h("div",{class:"stack"}, h("div",{class:"small muted"}, label || "Record yourself with your phone’s voice recorder while you answer. Then upload the file to listen back and score yourself."), h("div",{class:"rec-row"}, lab, upBtn(cap(kp[0]), kp[1], task, "Send to my Drive folder")), driveOn()? h("div",{class:"small muted"}, "Your file is renamed automatically, for example ", h("code",{class:"mono"}, fname+"_"+slug(task||"Task")+".m4a"), ".") : h("div",{class:"small"}, "Name your file: ", h("code",{class:"mono"}, fname), h("span",{class:"muted"}," (keep the extension, for example .m4a)")), out);
+  return h("div",{class:"stack"}, h("div",{class:"small muted"}, label || "Record yourself with your phone’s voice recorder while you answer. Then upload the file to listen back and score yourself."), h("div",{class:"rec-row"}, lab, (()=>{ const b = h("button",{class:"btn sm primary",type:"button"},"Send to my teacher"); b.addEventListener("click", async ()=>{ const f = inp.files && inp.files[0]; if(!f){ toast("Choose your recording first."); return; } if(!signedIn()){ toast("Sign in with Google first."); return; } b.disabled = true; try{ await ssPost({action:"recording", section:cap(kp[0]), day:kp[1], task:task||"", prompt:"", transcript:"", mime:f.type||"audio/mp4", ext:(/\.[A-Za-z0-9]{1,5}$/.exec(f.name)||[".m4a"])[0].toLowerCase(), blob:f}); toast("Sent to your teacher."); }catch(e){ toast(e.message); } finally{ b.disabled = false; } }); return b; })()), h("div",{class:"small muted"}, "The file is stored securely for your teacher. Maximum 25 MB."), out);
 }
 
 /* Listen and Repeat */
@@ -8315,7 +8394,7 @@ const GMAIL = /^[^\s@]+@(gmail\.com|googlemail\.com)$/i;
 const ANYMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const DRIVE = /^https:\/\/(drive|docs)\.google\.com\//i;
 function slug(t){ return (t||"student").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^A-Za-z0-9]+/g,"-").replace(/^-|-$/g,""); }
-function driveOn(){ return !!(DRIVE_APP.url && DRIVE_APP.code); }
+function driveOn(){ return false; } /* Google Drive folders are replaced by Supabase */
 function driveUrl(params){ const q = Object.assign({code:DRIVE_APP.code}, params); return DRIVE_APP.url+"?"+Object.keys(q).map(k=>k+"="+encodeURIComponent(q[k]==null?"":q[k])).join("&"); }
 function joinUrl(){ const a = S.account||{}; return driveUrl({mode:"join", name:a.name||S.name||"", email:a.email||""}); }
 function uploadUrl(section, day, task){ return driveUrl({mode:"upload", email:(S.account&&S.account.email)||"", section, day, task:task||""}); }
@@ -8328,35 +8407,17 @@ function upBtn(section, day, task, label){
   return driveBtn("Upload to my Drive folder"); }
 function viewRegister(){
   const a = S.account||{};
-  const name = h("input",{class:"input",id:"rg-name",placeholder:"First and last name",value:a.name||S.name||"",autocomplete:"name"});
-  const email = h("input",{class:"input",id:"rg-email",type:"email",placeholder:"yourname@gmail.com",value:a.email||"",autocomplete:"email"});
-  const email2 = h("input",{class:"input",id:"rg-email2",type:"email",placeholder:"Type your Google email again",autocomplete:"off"});
-  const ws = h("input",{type:"checkbox",id:"rg-ws"});
-  const drive = h("input",{class:"input",id:"rg-drive",placeholder:"https://drive.google.com/drive/folders/… (optional for now)",value:a.drive||""});
-  const agree = h("input",{type:"checkbox",id:"rg-agree"});
-  const err = h("div",{class:"no-audio",hidden:true});
-  function fail(m){ err.textContent = m; err.hidden = false; }
-  const create = h("button",{class:"btn primary",type:"submit"},"Create my StratSix account");
-  const form = h("form",{class:"stack",novalidate:true},
-    h("div",{class:"stack",style:"gap:6px"}, h("label",{for:"rg-name",class:"q"},"Full name"), name),
-    h("div",{class:"stack",style:"gap:6px"}, h("label",{for:"rg-email",class:"q"},"Google email (Gmail)"), email, email2, h("label",{for:"rg-ws",class:"small muted",style:"display:flex;gap:8px;align-items:center"}, ws, "My school gives me a Google account with a different address (Google Workspace)")),
-    driveOn()? h("div",{class:"why small"}, h("b",null,"Your Drive folder. "), "After you register, press ", h("b",null,"Create my Drive folder"), " on your dashboard. StratSix creates a folder with your name and shares it with this email.") : h("div",{class:"stack",style:"gap:6px"}, h("label",{for:"rg-drive",class:"q"},"My StratSix Google Drive folder"), drive, h("div",{class:"small muted"},"Your teacher will send you this link. You can add it later on your dashboard.")),
-    h("label",{for:"rg-agree",class:"small",style:"display:grid;grid-template-columns:22px minmax(0,1fr);gap:8px;align-items:start"}, agree, h("span",null,"I understand that my progress is saved in this browser. To use another device, I will copy my backup code from My progress.")),
-    err, h("div",{class:"row"}, create));
-  form.addEventListener("submit",(e)=>{ e.preventDefault(); err.hidden = true;
-    const n = name.value.trim().replace(/\s+/g," "), m = email.value.trim().toLowerCase(), m2 = email2.value.trim().toLowerCase(), d = drive.value.trim();
-    if(n.split(" ").length < 2) return fail("Write your first and last name, as your teacher knows you.");
-    if(!(ws.checked? ANYMAIL : GMAIL).test(m)) return fail(ws.checked? "That email address is not valid." : "Use a Gmail address (ending in @gmail.com). If your school gives you a Google account, tick the box below the email.");
-    if(m !== m2) return fail("The two email addresses are different. Type the same address twice.");
-    if(d && !DRIVE.test(d)) return fail("The Drive link should start with https://drive.google.com/ . Copy it from the message your teacher sent, or leave it empty for now.");
-    if(!agree.checked) return fail("Tick the box to confirm you understand how your progress is saved.");
-    S.account = {name:n, email:m, drive:d||"", created:new Date().toISOString()}; S.name = n; save(); toast("Welcome to StratSix, "+n.split(" ")[0]+"!"); go({name:"home"});
-  });
+  const legacy = (S.account && !S.account.uid)? h("div",{class:"why small"}, h("b",null,"Welcome back. "), "StratSix now uses Google sign-in. Choose the Google account you registered with. Your progress on this device is kept.") : null;
+  const form = h("div",{class:"stack"},
+    legacy,
+    h("div",{class:"row"}, h("button",{class:"btn primary",type:"button",id:"rg-google",onclick:googleSignIn},"Continue with Google")),
+    h("div",{class:"small muted"}, "By continuing you agree to the ", h("a",{href:"privacy.html",target:"_blank",rel:"noopener"},"Privacy Policy"), ". StratSix stores your name, email, progress, recordings and writing so your teacher can review them and give you feedback."),
+    h("div",{class:"small muted"}, "Your progress is also kept in this browser. To use another device, copy your backup code from My progress."));
   const code = h("textarea",{class:"textarea",style:"min-height:80px",id:"rg-restore",placeholder:"Paste your backup code here"});
   const restore = h("details",{class:"panel"}, h("summary",{class:"q",style:"cursor:pointer"},"I already have an account on another device"), h("div",{class:"stack",style:"margin-top:10px"}, h("p",{class:"small muted"},"On your other device, open My progress → Copy backup code, then paste it here."), code, h("div",{class:"row"}, h("button",{class:"btn",type:"button",onclick:()=>{ try{ const t = code.value.trim(); const o = JSON.parse(t.startsWith("{")? t : decodeURIComponent(escape(atob(t)))); if(!o.days) throw 0; S = Object.assign(S,o); save(); toast("Account restored."); go({name:"home"}); }catch(e){ toast("That is not a StratSix backup code. Copy the whole code and try again."); } }},"Restore my account"))));
   const pin = h("input",{class:"input",type:"password",id:"rg-pin",placeholder:"Teacher PIN",style:"max-width:180px"});
   const teacher = h("details",{class:"small"}, h("summary",{style:"cursor:pointer"},"I am the teacher"), h("div",{class:"row",style:"margin-top:8px"}, pin, h("button",{class:"btn sm",type:"button",onclick:()=>{ if(pin.value.trim()===TEACHER_PIN){ S.teacher = true; save(); go({name:"teacher"}); } else toast("That PIN is not correct."); }},"Enter as teacher")));
-  return h("main",{class:"page",style:"max-width:720px"}, h("div",{class:"hero-main",style:"margin-bottom:16px"}, h("div",{class:"eyebrow"},"TOEFL iBT® test prep · 2026 format · B2–C1"), h("h1",null,"Create your StratSix account"), h("p",null,"Register with your Google email. Your teacher uses it to find your Google Drive folder, where you will upload your speaking recordings and writing.")), h("div",{class:"panel stack"}, form), h("div",{style:"margin-top:12px"}, restore), h("div",{style:"margin-top:12px"}, teacher));
+  return h("main",{class:"page",style:"max-width:720px"}, h("div",{class:"hero-main",style:"margin-bottom:16px"}, h("div",{class:"eyebrow"},"TOEFL iBT® test prep · 2026 format · B2–C1"), h("h1",null,"Sign in to StratSix"), h("p",null,"Sign in with your Google account. Your teacher can then see your work and give you feedback.")), h("div",{class:"panel stack"}, form), h("div",{style:"margin-top:12px"}, restore), h("div",{style:"margin-top:12px"}, teacher));
 }
 function editProfile(){
   const a = S.account||{};
@@ -8403,7 +8464,7 @@ function viewHome(){
         h("div",{class:"row",style:"margin-top:18px"}, h("button",{class:"btn red",onclick:()=>go({name:"sec",sec:nd?next.sec:"reading",day:nd.n})}, "Continue the climb: "+cap(next.sec)+" · Day "+nd.n), h("button",{class:"btn outline",onclick:()=>go({name:"feedback"})},"My feedback")),
         h("div",{class:"camps-legend small"}, h("span",null, h("i",{class:"lg done"}),"Done"), h("span",null, h("i",{class:"lg cur"}),"Today"), h("span",null, h("i",{class:"lg mock"}),"Mock test unlocks"), h("span",null,"Bands 1–6 in half bands · B2 ≈ 4–4.5 · C1 ≈ 5–5.5")))),
     h("div",{class:"panel stack namebox"}, h("div",{class:"eyebrow"},"My account"), h("div",null, h("b",{style:"font-size:1.1rem"}, (S.account&&S.account.name)||S.name||"Teacher preview"), h("div",{class:"small muted mono"}, (S.account&&S.account.email)||"")),
-      S.account && S.account.drive ? h("div",{class:"row"}, driveBtn(), h("button",{class:"btn ghost sm",type:"button",onclick:(e)=>{ e.target.replaceWith(editProfile()); }},"Change link")) : (S.account? (driveOn()? h("div",{class:"stack",style:"gap:8px"}, h("div",{class:"small"}, h("b",null,"1."), " Create your folder (it opens a Google page). ", h("b",null,"2."), " Copy the link it shows and paste it here."), h("a",{class:"btn primary sm",href:joinUrl(),target:"_blank",rel:"noopener",id:"join-drive"},"Create my Drive folder"), editProfile()) : editProfile()) : null),
+      signedIn() ? h("div",{class:"row"}, h("span",{class:"pill ok"},"Signed in with Google"), h("button",{class:"btn ghost sm",type:"button",onclick:signOutGoogle},"Sign out")) : null,
       h("div",{class:"kv"}, "Started", h("b",null, new Date(S.started).toLocaleDateString())),
       h("div",{class:"kv"}, "Days completed", h("b",null, SECS.reduce((a,s)=>a+secStats(s).done,0)+" / 68")),
       h("div",{class:"kv"}, "Progress saved on", h("b",null,"this device")),
@@ -8661,9 +8722,9 @@ function teacherPanel(){
   const off = h("button",{class:"btn",onclick:()=>{ S.teacher=false; persist(); toast("Preview mode off. Days lock again."); render(); }},"Turn preview mode off");
   return h("div",{class:"panel stack",style:"margin-top:16px"}, h("h2",null,"Preview mode"), h("p",{class:"muted small"},"Students unlock each day by completing every activity of the previous day. To review or teach any day yourself, turn on preview mode on your own device."), S.teacher? h("div",{class:"row"}, h("span",{class:"pill ok"},"Preview mode is on"), off) : h("div",{class:"row"}, pin, on));
 }
-function driveStatus(){ return h("div",{class:"panel stack",style:"margin-top:16px"}, h("h2",null,"Google Drive connection"),
-  driveOn()? h("div",{class:"row"}, h("span",{class:"pill ok"},"Connected"), h("span",{class:"small muted"},"Students create their own named folder from the dashboard, and their uploads are logged in your BandSix Roster sheet.")) :
-  h("p",{class:"small muted"},"Not connected yet. Students paste a Drive folder link that you share with them. To automate folders, deploy the BandSix Drive script and send its web app URL and class code to Claude.")); }
+function driveStatus(){ return h("div",{class:"panel stack",style:"margin-top:16px"}, h("h2",null,"Student data connection"),
+  sbOn()? h("div",{class:"row"}, h("span",{class:"pill ok"},"Connected"), h("span",{class:"small muted"},"Students sign in with Google. Their recordings, writing and scores are stored securely in Supabase and appear in the Review queue.")) :
+  h("p",{class:"small muted"},"Not connected. Reload the page. If this stays, check your internet connection.")); }
 /* ---------- teacher lesson plans (PDF files published with the page) ---------- */
 const PLANS = SECS.map(sec=>({sec, file:"plans/StratSix-Lesson-Plans-"+cap(sec)+".pdf", name:"StratSix-Lesson-Plans-"+cap(sec)+".pdf"}));
 async function getPlan(pl, btn){
@@ -8706,17 +8767,16 @@ function viewFeedback(){
   let items = [];
   function draw(){ list.innerHTML = ""; const f = filt.value; const shown = items.filter(x=>!f || x.section===f); shown.forEach(it=>list.append(fbCard(it))); status.textContent = shown.length? shown.length+" response"+(shown.length>1?"s":"") : "Nothing here yet. Send a speaking set or a writing task to see feedback here."; status.hidden = false; }
   filt.addEventListener("change", draw);
-  if(!driveOn() || !(S.account&&S.account.email)) status.textContent = "Register with your Google email to receive feedback.";
-  else ssGet({action:"feedback", email:S.account.email}).then(j=>{ items = j.items||[]; draw(); }).catch(e=>{ status.textContent = e.message; });
+  if(!signedIn()) status.textContent = "Sign in with Google to see your feedback.";
+  else ssGet({action:"feedback"}).then(j=>{ items = j.items||[]; draw(); }).catch(e=>{ status.textContent = e.message; });
   return h("main",{class:"page stack"}, h("div",{class:"row",style:"justify-content:space-between"}, h("div",null, h("div",{class:"eyebrow"},"AI estimate · teacher score"), h("h1",null,"My feedback")), filt), status, list);
 }
 function teacherReview(){
-  let tkey = ""; try{ tkey = localStorage.getItem("stratsix.tkey")||""; }catch(e){}
-  const keyIn = h("input",{class:"input",id:"tq-key",type:"password",placeholder:"Teacher key",value:tkey,style:"max-width:220px"});
+  const keyIn = {value:""}; let tkey = "";
   const status = h("div",{class:"small muted"});
   const qbox = h("div",{class:"stack",style:"gap:6px"}); const detail = h("div",{class:"stack"});
   let items = [], sel = null;
-  async function load(){ tkey = keyIn.value.trim(); try{ localStorage.setItem("stratsix.tkey", tkey); }catch(e){}
+  async function load(){
     status.textContent = "Loading…"; try{ const j = await ssGet({action:"queue", tkey, all:showAll.checked?"1":""}); items = j.items||[]; status.textContent = items.length? items.length+" to review" : "Nothing waiting."; drawQ(); }catch(e){ status.textContent = e.message; } }
   function drawQ(){ qbox.innerHTML = ""; items.forEach(it=>{ const ai = aiParse(it.ai); const b = h("button",{class:"tq-item",type:"button","aria-pressed":sel===it?"true":"false"}, h("span",null, h("b",null,it.name), h("div",{class:"small muted"}, it.section+(it.day?" · Day "+it.day:"")+" · "+it.task)), h("span",{class:"mono small"}, ai&&ai.score? "AI "+ai.score : "AI –")); b.addEventListener("click",()=>{ sel = it; drawQ(); drawD(); }); qbox.append(b); }); }
   function drawD(){ detail.innerHTML = ""; if(!sel) return; const it = sel; const ai = aiParse(it.ai);
@@ -8725,11 +8785,11 @@ function teacherReview(){
     const note = h("textarea",{class:"textarea",id:"tq-note",style:"min-height:80px",placeholder:"Note to the student (optional)"}); note.value = it.tnote||"";
     const saveB = h("button",{class:"btn red",type:"button"},"Publish to student");
     const agree = ai&&ai.score&&!isNaN(Number(ai.score))? h("button",{class:"btn",type:"button",onclick:()=>{ pick = Math.round(Number(ai.score)); [...sp.children].forEach((x,i)=>x.setAttribute("aria-pressed", i===pick?"true":"false")); }},"Agree with AI") : null;
-    saveB.addEventListener("click", async ()=>{ if(pick==null){ toast("Choose a score from 0 to 5."); return; } saveB.disabled = true; try{ await ssPost({action:"teacherScore", tkey:keyIn.value.trim(), row:it.row, score:pick, note:note.value}); it.tscore = pick; it.tnote = note.value; toast("Published."); items = items.filter(x=>x!==it || showAll.checked); sel = null; drawQ(); drawD(); status.textContent = items.length+" to review"; }catch(e){ toast(e.message); } finally{ saveB.disabled = false; } });
+    saveB.addEventListener("click", async ()=>{ if(pick==null){ toast("Choose a score from 0 to 5."); return; } saveB.disabled = true; try{ await ssPost({action:"teacherScore", row:it.row, score:pick, note:note.value}); it.tscore = pick; it.tnote = note.value; toast("Published."); items = items.filter(x=>x!==it || showAll.checked); sel = null; drawQ(); drawD(); status.textContent = items.length+" to review"; }catch(e){ toast(e.message); } finally{ saveB.disabled = false; } });
     detail.append(h("div",{class:"panel stack"},
       h("div",{class:"eyebrow"}, it.section+(it.day?" · Day "+it.day:"")+" · "+it.task+" · "+new Date(it.time).toLocaleString()), h("h2",null, it.name),
       it.prompt? h("div",{class:"small"}, h("b",null,"Task: "), it.prompt) : null,
-      it.link? h("a",{class:"btn sm",href:it.link,target:"_blank",rel:"noopener"}, it.section==="Speaking"? "Open the recording in Drive" : "Open the portfolio") : null,
+      it.link? h("a",{class:"btn sm",href:it.link,target:"_blank",rel:"noopener"}, "Open the recording") : null,
       it.transcript? h("div",{class:"rec-heard"}, h("b",null, it.section==="Speaking"? "Transcript: " : "Response: "), it.transcript) : (it.section==="Speaking"? h("div",{class:"small muted"},"No transcript from this device. Listen to the recording.") : null),
       h("div",{class:"fb-scores"}, h("div",{class:"fb-score ai"}, h("div",{class:"small"},"AI estimate"), h("div",{class:"big"}, ai&&ai.score? ai.score : "–"), ai&&ai.band? h("div",{class:"small"},"≈ Band "+ai.band):null, ai&&ai.link? h("a",{href:ai.link,target:"_blank",rel:"noopener",style:"color:#fff"},"AI report"):null), h("div",{class:"fb-score"}, h("div",{class:"small muted"},"Your score"), sp)),
       h("label",{for:"tq-note",class:"small"},"Note to student"), note, h("div",{class:"row"}, agree, saveB)));
@@ -8737,9 +8797,9 @@ function teacherReview(){
   const showAll = h("input",{type:"checkbox",id:"tq-all"});
   showAll.addEventListener("change", load);
   const loadB = h("button",{class:"btn primary sm",type:"button",onclick:load},"Load queue");
-  if(tkey) setTimeout(load, 0);
+  if(S.account && S.account.role==="teacher") setTimeout(load, 0);
   return h("div",{class:"panel stack",style:"margin-top:16px"}, h("div",{class:"eyebrow"},"StratSix"), h("h2",null,"Review queue"), h("p",{class:"small muted"},"Recordings and writing sent from StratSix, with Claude's AI estimate. Add your own score and it appears in the student's My feedback."),
-    h("div",{class:"row"}, h("label",{for:"tq-key",class:"small"},"Teacher key"), keyIn, loadB, h("label",{for:"tq-all",class:"small row",style:"gap:6px"}, showAll, "Include scored")), status,
+    h("div",{class:"row"}, (signedIn()? h("span",{class:"pill ok"}, "Signed in as "+S.account.email+(S.account.role==="teacher"? " (teacher)" : " (not a teacher account)")) : h("button",{class:"btn sm",type:"button",onclick:googleSignIn},"Sign in with Google")), loadB, h("label",{for:"tq-all",class:"small row",style:"gap:6px"}, showAll, "Include scored")), status,
     h("div",{class:"tq-grid"}, qbox, detail));
 }
 function viewTeacher(){
@@ -8881,12 +8941,12 @@ function simBegin(cur, sec, part){
   cur.deadline = mins ? Date.now() + mins*60000 : null;
 }
 function simAutoSend(n, T, cur, sec, part){
-  if(!driveOn() || !(S.account && S.account.email)) return;
+  if(!signedIn()) return;
   S.simSent = S.simSent || {}; const sent = S.simSent[cur.id] = S.simSent[cur.id] || {};
   if(sec==="speaking"){
     const len = part==="lr"? T.speaking.lr.items.length : T.speaking.iv.qs.length; const ids = [];
     for(let i=0;i<len;i++) ids.push("sim-"+n+"-"+part+"-"+i);
-    sendClips(ids, {day:"", task:"Test "+n+" "+(part==="lr"? "Listen and Repeat" : "Interview"), mock:true}).then(k=>{ sent[part] = k; save(); toast("Speaking answers saved to your Drive folder."); }).catch(e=>{ sent[part] = "error: "+e.message; save(); });
+    sendClips(ids, {day:"", task:"Test "+n+" "+(part==="lr"? "Listen and Repeat" : "Interview"), mock:true}).then(k=>{ sent[part] = k; save(); toast("Speaking answers saved. Your teacher can review them."); }).catch(e=>{ sent[part] = "error: "+e.message; save(); });
   }
   if(sec==="writing" && (part==="email" || part==="disc")){
     const text = cur.ans["writing."+part]||""; if(!text.trim()) return;
@@ -9589,7 +9649,7 @@ function lockedSection(sec){
   return h("main",{class:"page",style:"max-width:720px"}, h("div",{class:"panel stack"}, h("div",{class:"eyebrow"}, cap(sec)+" · 17 days"), h("h1",null, BS.sections[sec].title+" is locked"), h("p",null, modLockText(sec)),
     h("p",{class:"small muted"},"Finished modules stay open for review for "+REVIEW_DAYS+" days after they end."), unlockBox(sec, true)));
 }
-function refreshAccess(){ if(!driveOn()) return; ssGet({action:"access"}).then(j=>{ if(j && j.cfg && typeof j.cfg==="object"){ const n = Object.assign({}, ACC_DEFAULT, j.cfg); if(JSON.stringify(n)!==JSON.stringify(ACC)){ ACC = n; try{ render(); }catch(e){} } } }).catch(()=>{}); }
+function refreshAccess(){ if(!SB) return; ssGet({action:"access"}).then(j=>{ if(j && j.cfg && typeof j.cfg==="object"){ const n = Object.assign({}, ACC_DEFAULT, j.cfg); if(JSON.stringify(n)!==JSON.stringify(ACC)){ ACC = n; try{ render(); }catch(e){} } } }).catch(()=>{}); }
 function accessDoc(cfg){ return '<script type="application/json" id="bs-access">'+JSON.stringify(cfg).replace(/</g,"\\u003c")+'</scr'+'ipt>'; }
 function accessTool(){
   const draft = JSON.parse(JSON.stringify(ACC));
@@ -9610,16 +9670,15 @@ function accessTool(){
     for(const sec of SECS){ const c = draft[sec]; if(c.mode==="dates" && (!c.s || !c.e || c.e < c.s)){ toast(cap(sec)+": choose an opening date and a later closing date."); return; } }
     saveBtn.disabled = true; status.textContent = "Publishing…";
     try{
-      let tkey = ""; try{ tkey = localStorage.getItem("stratsix.tkey")||""; }catch(e){}
-      if(!tkey) throw {code:"nokey"};
-      await ssPost({action:"access", tkey, cfg:draft});
+      if(!(S.account && S.account.role==="teacher")) throw {code:"nokey"};
+      await ssPost({action:"access", cfg:draft});
       ACC = Object.assign({}, ACC_DEFAULT, JSON.parse(JSON.stringify(draft)));
       status.textContent = "Saved. Students get the new schedule the next time they open StratSix."; saveBtn.disabled = false; render();
     }catch(e){
       saveBtn.disabled = false;
       const c = e && e.code;
       status.innerHTML = "";
-      status.append(c==="nokey"? "Enter your teacher key in the Review queue above first." : (e && e.message) ? e.message : "Not saved. Try again.");
+      status.append(c==="nokey"? "Sign in with the teacher Google account in the Review queue above first." : (e && e.message) ? e.message : "Not saved. Try again.");
     }
   });
   return h("div",{class:"panel stack",style:"margin-top:16px"}, h("h2",null,"Module switches"), h("p",{class:"muted small"},"Choose what students can open. “Open by dates” opens the module on the first date and closes it on the second; students then keep "+REVIEW_DAYS+" days of review access. Changes reach every student after you press Save. Simulator tests follow the same switches."), ...rows, h("div",{class:"row"}, saveBtn), status);
@@ -9662,7 +9721,7 @@ function unlockTool(){
   return h("div",{class:"panel stack",style:"margin-top:16px"}, h("h2",null,"Give one student access"), h("p",{class:"muted small"},"Creates a code for one student only. It works only with the email the student registered with, so classmates cannot use it. It works even when the module is closed for the class. Choose the whole module (at the normal pace of one day per day, or all days at once) or a single day."), h("div",{class:"row"}, email, sec, day, btn), out);
 }
 
-function siteFoot(){ return h("footer",{class:"site-foot"}, h("p",null,"TOEFL® and TOEFL iBT® are registered trademarks of ETS. StratSix is an independent course and is not endorsed or approved by ETS. All passages, listening scripts, tasks, model answers and scoring descriptions in StratSix are original material. Scores in StratSix are practice estimates, not official scores.")); }
+function siteFoot(){ return h("footer",{class:"site-foot"}, h("p",null,"TOEFL® and TOEFL iBT® are registered trademarks of ETS. StratSix is an independent course and is not endorsed or approved by ETS. All passages, listening scripts, tasks, model answers and scoring descriptions in StratSix are original material. Scores in StratSix are practice estimates, not official scores. "), h("p",null, h("a",{href:"privacy.html",target:"_blank",rel:"noopener"},"Privacy Policy"))); }
 
 let lastMotion = null;
 const REDUCED = () => { try{ return window.matchMedia("(prefers-reduced-motion: reduce)").matches; }catch(e){ return false; } };
@@ -9694,7 +9753,7 @@ function celebrate(){
 function render(){
   onSaveHook = null;
   root.innerHTML="";
-  if(!S.account && !S.teacher){ root.append(h("header",{class:"bar"}, h("div",{class:"bar-in"}, h("span",{class:"brand"}, brandMark(), h("span",{class:"brand-name"},"StratSix", h("span",null,"· iBT"))))), viewRegister(), siteFoot()); return; }
+  if(!signedIn() && !S.teacher){ root.append(h("header",{class:"bar"}, h("div",{class:"bar-in"}, h("span",{class:"brand"}, brandMark(), h("span",{class:"brand-name"},"StratSix", h("span",null,"· iBT"))))), viewRegister(), siteFoot()); return; }
   if(VIEW.name==="simrun"){ root.append(viewSimRun()); return; }
   root.append(navBar());
   let v;
@@ -9716,8 +9775,12 @@ function render(){
 const tok = (location.hash||"").slice(1);
 if(SECS.includes(tok)) VIEW = {name:"sec",sec:tok,day:lastDay(tok)}; else if(["rubrics","progress","teacher","sim","feedback"].includes(tok)) VIEW={name:tok};
 render();
+if(SB){
+  SB.auth.getSession().then(r=>{ const ses = r && r.data && r.data.session; if(ses){ return adoptSession(ses).then(ok=>{ if(ok){ render(); refreshAccess(); } }); } else if(S.account && S.account.uid){ S.account = Object.assign({}, S.account, {uid:"", role:""}); save(); render(); } }).catch(()=>{});
+  SB.auth.onAuthStateChange((ev, ses)=>{ if(ev==="SIGNED_IN" && ses && !signedIn()){ setTimeout(()=>{ adoptSession(ses).then(()=>{ render(); refreshAccess(); }); }, 0); } });
+}
 refreshAccess();
-window.__BS_TEST = {buildCW};
+window.__BS_TEST = {buildCW, ssPost, ssGet, signedIn};
 })();
 
 </script>
