@@ -8549,7 +8549,7 @@ function viewHome(){
   const P = progressPanels();
   const results = h("section",{id:"results",class:"stack",style:"margin-top:16px"}, h("div",{class:"eyebrow"},"Your results"), h("h2",null,"How you are doing"), P.etsPanel, P.accuracy);
   const more = h("details",{id:"share",class:"panel",style:"margin-top:16px"}, h("summary",{class:"q",style:"cursor:pointer"},"Share a report, back up, and audio settings"), h("div",{class:"stack",style:"margin-top:12px"}, P.send, P.backup));
-  return h("main",{class:"page"}, hero, cards, results, accessPanel(), simHomeStrip(), h("div",{class:"two",style:"margin-top:16px"}, fmtT, week), more);
+  return h("main",{class:"page"}, hero, cards, results, accessPanel(), h("div",{class:"two",style:"margin-top:16px"}, fmtT, week), more);
 }
 function dayMinutes(d){ const m = d.stages.reduce((a,s)=>a+(s.mins||0),0); return m || d.minutes || 60; }
 function durText(m){ const hh = Math.floor(m/60), mm = m%60; return hh? hh+" h"+(mm? " "+mm+" min":"") : mm+" min"; }
