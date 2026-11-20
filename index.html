@@ -539,7 +539,7 @@ audio{width:100%;max-width:420px}
 .site-foot p{margin:0;max-width:760px}
 
 
-/* Motion: dashboard + My progress (subtle; disabled for reduced-motion users) */
+/* Motion: dashboard (subtle; disabled for reduced-motion users) */
 @keyframes moIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
 @keyframes moFill{from{width:0}}
 @keyframes moPulse{0%{transform:scale(1);opacity:.75}100%{transform:scale(2.6);opacity:0}}
@@ -598,7 +598,7 @@ BS.routine = [
   ["In class","Your teacher runs the live lesson. Days marked “Live class” are taught by your teacher in class."],
   ["After class","Do the guided practice and the timed task. Check your answers and read every explanation."],
   ["Every day","Do 15–20 minutes of English input from the Daily exposure list. Exposure builds the speed the test needs."],
-  ["Each week","Copy your progress report from My progress and send it to your teacher before the next class."]
+  ["Each week","Copy your progress report from the Dashboard and send it to your teacher before the next class."]
 ];
 
 /* ---------------- rubrics (0–5 task scale) ---------------- */
@@ -675,10 +675,10 @@ BS.teacher = {
     ["Assign a day","Tell students which section and day to complete before class. Each day unlocks only after every activity of the previous day is done, so students work in order. Use preview mode below to open all days on your own device."],
     ["Teach the live lesson","Days marked with an ETS lesson follow that lesson’s objectives. Use the worked example on screen during class if you want a shared model."],
     ["Practice after class","Students complete the practice and the timed task. Auto-scored tasks give instant explanations. Writing and speaking use self-scored rubrics plus model answers."],
-    ["Collect reports","Students copy or download their report from My progress and send it to you. Writing texts are included in full."],
+    ["Collect reports","Students copy or download their report from the Dashboard and send it to you. Writing texts are included in full."],
     ["Run the mocks","Day 16 of each section is an adaptive mock. Module 1 routes students to an upper or lower Module 2, as on the real test."]
   ],
-  collect:"<p><b>Student accounts and submissions.</b> Each student signs in with their Google account. StratSix stores their recordings, writing and scores securely in Supabase. Recordings sent with <b>Send my recordings to my teacher</b> and writing sent with <b>Send for AI feedback</b> appear in the <b>Review queue</b> below (sign in with your teacher Google account), where you add your own score and note. The student sees your score in <b>My feedback</b>.</p><p>Progress is saved in each student’s browser. To see their scores, ask them to open <b>My progress</b> and either:</p><ul><li><b>Copy report</b> and paste it into WhatsApp or email, or</li><li><b>Download report</b> to send an HTML file.</li></ul><p>For speaking, students record on their phone while the page plays the prompts and runs the timer. Ask them to send the audio file together with the report. Their self-scores on the four interview criteria are in the report, so you can compare them with your own score. The gap between the two is useful feedback in itself.</p><p>A student who changes device can copy a <b>backup code</b> and restore it on the new device.</p><p><b>Speaking scores.</b> On Speaking Days 1, 6, 15 and 16, students score their full set (7 Listen and Repeat + 4 interview responses) with the StratSix scoring guides (0–5, the same task scale as the test). When you receive the recording, turn on preview mode, open the scoring tool below, give each response 0–5, add feedback and press <i>Create score code</i>. Send the message to the student; when they paste the code on that day, they see your scores next to theirs and an estimated band.</p>"
+  collect:"<p><b>Student accounts and submissions.</b> Each student signs in with their Google account. StratSix stores their recordings, writing and scores securely in Supabase. Recordings sent with <b>Send my recordings to my teacher</b> and writing sent with <b>Send for AI feedback</b> appear in the <b>Review queue</b> below (sign in with your teacher Google account), where you add your own score and note. The student sees your score in <b>My feedback</b>.</p><p>Progress is saved to each student’s account and appears in the <b>Students</b> tab. If you also want a copy, ask them to open the <b>Dashboard</b> and either:</p><ul><li><b>Copy report</b> and paste it into WhatsApp or email, or</li><li><b>Download report</b> to send an HTML file.</li></ul><p>For speaking, students record on their phone while the page plays the prompts and runs the timer. Ask them to send the audio file together with the report. Their self-scores on the four interview criteria are in the report, so you can compare them with your own score. The gap between the two is useful feedback in itself.</p><p>A student who changes device can copy a <b>backup code</b> and restore it on the new device.</p><p><b>Speaking scores.</b> On Speaking Days 1, 6, 15 and 16, students score their full set (7 Listen and Repeat + 4 interview responses) with the StratSix scoring guides (0–5, the same task scale as the test). When you receive the recording, turn on preview mode, open the scoring tool below, give each response 0–5, add feedback and press <i>Create score code</i>. Send the message to the student; when they paste the code on that day, they see your scores next to theirs and an estimated band.</p>"
 };
 
 /* ---------------- StratSix speaking scoring guides (0–5 task scale; original wording) ---------------- */
@@ -1289,7 +1289,7 @@ D.push({n:17, title:"Review and personal study plan", task:"All Reading tasks", 
  stages:[
   {kind:"learn", title:"Read your own data", mins:10, blocks:[
     {t:"steps", items:[
-      ["Open My progress.","Look at accuracy by task type. Any bar under 60% is your first priority."],
+      ["Open the Dashboard.","Look at accuracy by task type. Any bar under 60% is your first priority."],
       ["Match weaknesses to days.","Complete the Words → Days 2–4 and 13. Daily Life → Days 5–7. Main idea → Day 8. Details → Day 9. Vocabulary → Day 10. Purpose → Day 11. Inference → Day 12. Wrong-answer traps → Day 15."],
       ["Redo, don’t just reread.","Repeat the practice on your weakest day tomorrow without looking at your old answers."]]}
   ]},
@@ -1333,7 +1333,7 @@ D.push({n:1, title:"Inside the new Listening section", task:"All Listening tasks
       ["Listen to an Academic Talk","A short lecture or podcast segment","Up to 4 questions"]]},
     {t:"steps", intro:"How to use the audio on StratSix:", items:[
       ["Press play on each recording.","The platform reads the scripts with your browser’s voices. Woman and man speakers use different voices."],
-      ["Set replay to “once” for test practice.","You can change this on the My progress page. Leave replay on while you learn a new strategy."],
+      ["Set replay to “once” for test practice.","You can change this on the Dashboard. Leave replay on while you learn a new strategy."],
       ["Read the transcript only after you answer.","Then listen again while reading. This is where most learning happens."]]}
   ]},
   {kind:"practice", title:"Diagnostic: one of each task", mins:25, blocks:[
@@ -1932,7 +1932,7 @@ D.push({n:15, title:"Holding information in memory", task:"All Listening tasks",
       ["Keep calm after a missed detail.","If you miss something, let it go and focus on the next part. Worrying makes you miss more."]]}
   ]},
   {kind:"practice", title:"Mixed set, replay off", mins:30, blocks:[
-    {t:"html", html:"<p>Go to <b>My progress → Audio settings</b> and set replay to <b>Once only</b> before you start. Use visualization and silent summaries.</p>"},
+    {t:"html", html:"<p>Go to <b>Dashboard → Audio settings</b> and set replay to <b>Once only</b> before you start. Use visualization and silent summaries.</p>"},
     {t:"response", items:[
       {line:"W: Do you know whether the bookstore sells used textbooks?", o:["Only for some courses, I think.","I sold my bike.","The textbook is heavy.","Whether it rains or not."], a:0, why:"An indirect yes: only for some courses."},
       {line:"M: I’m thinking of switching my major to architecture.", o:["What made you decide that?","The building is old.","I switched off the lights.","It’s a major road."], a:0, why:"News about a decision → a natural follow-up question."},
@@ -2060,7 +2060,7 @@ D.push({n:17, title:"Review and personal study plan", task:"All Listening tasks"
  stages:[
   {kind:"learn", title:"Read your own data", mins:8, blocks:[
     {t:"steps", items:[
-      ["Open My progress and check the four Listening bars.","Any bar under 60% is a priority."],
+      ["Open the Dashboard and check the four Listening bars.","Any bar under 60% is a priority."],
       ["Match the task to the days.","Choose a Response → Days 2–5. Conversations → Days 6–8. Announcements → Days 9–10. Academic talks → Days 11–14. Memory → Day 15."],
       ["Plan exposure, not just practice.","Listening improves with hours of input. Aim for 20 minutes every day, not 2 hours on Sunday."]]}
   ]},
@@ -2607,7 +2607,7 @@ D.push({n:17, title:"Review and personal study plan", task:"All Writing tasks", 
  stages:[
   {kind:"learn", title:"Rewrite to improve", mins:10, blocks:[
     {t:"steps", items:[
-      ["Open My progress.","Look at your Build a Sentence accuracy and your rubric scores for emails and discussions."],
+      ["Open the Dashboard.","Look at your Build a Sentence accuracy and your rubric scores for emails and discussions."],
       ["Find your lowest criterion.","Task/Contribution → Days 7, 11, 13. Support → Day 12. Language → Days 14–15. Build a Sentence → Days 2–6."],
       ["Rewrite your weakest response from this section.","Rewriting with a model beside you is one of the fastest ways to improve. Do it below, then score it again."]]}
   ]},
@@ -7461,7 +7461,7 @@ const TTS = {
     next();
   }
 };
-if(TTS.ok){ TTS.load(); try{ speechSynthesis.onvoiceschanged = ()=>{ const before = TTS.voices.length; TTS.load(); if(before===0 && TTS.voices.length && typeof VIEW!=="undefined" && VIEW.name==="progress") render(); }; }catch(e){} }
+if(TTS.ok){ TTS.load(); try{ speechSynthesis.onvoiceschanged = ()=>{ const before = TTS.voices.length; TTS.load(); if(before===0 && TTS.voices.length && typeof VIEW!=="undefined" && VIEW.name==="home") render(); }; }catch(e){} }
 
 /* Audio player widget. lines = ["W: ..."], opts {label, sub, once, onDone} */
 function player(lines, opts){
@@ -8289,7 +8289,7 @@ function render(){
   playBtn.addEventListener("click",()=>{ if(playing){ setPlaying(false); stopAll(); return; } if(playBtn.textContent.includes("Replay")){ ci = 0; si = 0; } setPlaying(true); stepSeg(); });
   prev.addEventListener("click",()=>jump(ci-1)); next.addEventListener("click",()=>jump(ci+1));
   render(); cap.textContent = "Press Play to start the narrated tutorial ("+tu.mins+" min).";
-  return h("div",{class:"tu"}, chips, screen, h("div",{class:"tu-controls"}, prev, playBtn, next, h("div",{class:"tu-prog","aria-hidden":"true"}, prog), h("label",{class:"small",for:ccId,style:"display:flex;gap:6px;align-items:center"}, cc, "Captions"), doneNote), h("div",{class:"small muted"},"Narration uses the best English voice on your device. Change voices and speed in My progress → Audio settings."));
+  return h("div",{class:"tu"}, chips, screen, h("div",{class:"tu-controls"}, prev, playBtn, next, h("div",{class:"tu-prog","aria-hidden":"true"}, prog), h("label",{class:"small",for:ccId,style:"display:flex;gap:6px;align-items:center"}, cc, "Captions"), doneNote), h("div",{class:"small muted"},"Narration uses the best English voice on your device. Change voices and speed in Dashboard → Audio settings."));
 }
 R.tutorial = (b, ctx) => tutorialPlayer(BS.tutorials[b.id], ctx.key);
 
@@ -8384,7 +8384,7 @@ function rubricTable(id){
 /* ---------------- views ---------------- */
 let VIEW = {name:"home"};
 const root = document.getElementById("app");
-function go(v){ clearTimers(); onSaveHook = null; VIEW = v; if(v.sec){ S.last = {sec:v.sec, day:v.day}; save(); } render(); window.scrollTo(0,0); }
+function go(v){ clearTimers(); onSaveHook = null; if(v && v.name==="progress") v = {name:"home", anchor:"share"}; VIEW = v; if(v.sec){ S.last = {sec:v.sec, day:v.day}; save(); } render(); const el = v.anchor && document.getElementById(v.anchor); if(el){ if(el.tagName==="DETAILS") el.open = true; el.scrollIntoView(); } else window.scrollTo(0,0); }
 
 /* ---------------- Teacher: Students tab ---------------- */
 const STU = {rows:null, sel:null, err:"", loading:false};
@@ -8443,7 +8443,7 @@ function viewStudents(){
   return h("main",{class:"page"}, top, list.length? h("div",{class:"stack",style:"gap:8px"}, ...list) : h("p",{class:"muted"},"No students have signed in yet."));
 }
 function navBar(){
-  const items = [["home","Dashboard"],["reading","Reading"],["listening","Listening"],["writing","Writing"],["speaking","Speaking"],["sim","Test Simulator"],["feedback","My feedback"],["tutorials","Tutorials"],["rubrics","Rubrics"],["progress","My progress"],...((S.account&&S.account.role==="teacher")? [["students","Students"]] : []),["teacher","Teacher guide"]];
+  const items = [["home","Dashboard"],["reading","Reading"],["listening","Listening"],["writing","Writing"],["speaking","Speaking"],["sim","Test Simulator"],["feedback","My feedback"],["tutorials","Tutorials"],["rubrics","Rubrics"],...((S.account&&S.account.role==="teacher")? [["students","Students"]] : []),["teacher","Teacher guide"]];
   const cur = VIEW.sec || (VIEW.name==="tutorial"? "tutorials" : (VIEW.name==="simrun"||VIEW.name==="simreport")? "sim" : VIEW.name);
   return h("header",{class:"bar"}, h("div",{class:"bar-in"},
     h("button",{class:"brand",onclick:()=>go({name:"home"}),"aria-label":"StratSix dashboard"}, brandMark(), h("span",{class:"brand-name"},"StratSix", h("span",null,"· iBT"))),
@@ -8482,9 +8482,9 @@ function viewRegister(){
     legacy,
     h("div",{class:"row"}, h("button",{class:"btn primary",type:"button",id:"rg-google",onclick:googleSignIn},"Continue with Google")),
     h("div",{class:"small muted"}, "By continuing you agree to the ", h("a",{href:"privacy.html",target:"_blank",rel:"noopener"},"Privacy Policy"), ". StratSix stores your name, email, progress, recordings and writing so your teacher can review them and give you feedback."),
-    h("div",{class:"small muted"}, "Your progress is also kept in this browser. To use another device, copy your backup code from My progress."));
+    h("div",{class:"small muted"}, "Your progress is saved to your account automatically, so you can sign in on any device."));
   const code = h("textarea",{class:"textarea",style:"min-height:80px",id:"rg-restore",placeholder:"Paste your backup code here"});
-  const restore = h("details",{class:"panel"}, h("summary",{class:"q",style:"cursor:pointer"},"I already have an account on another device"), h("div",{class:"stack",style:"margin-top:10px"}, h("p",{class:"small muted"},"On your other device, open My progress → Copy backup code, then paste it here."), code, h("div",{class:"row"}, h("button",{class:"btn",type:"button",onclick:()=>{ try{ const t = code.value.trim(); const o = JSON.parse(t.startsWith("{")? t : decodeURIComponent(escape(atob(t)))); if(!o.days) throw 0; S = Object.assign(S,o); save(); toast("Account restored."); go({name:"home"}); }catch(e){ toast("That is not a StratSix backup code. Copy the whole code and try again."); } }},"Restore my account"))));
+  const restore = h("details",{class:"panel"}, h("summary",{class:"q",style:"cursor:pointer"},"I already have an account on another device"), h("div",{class:"stack",style:"margin-top:10px"}, h("p",{class:"small muted"},"On your other device, open the Dashboard → Share a report, back up… → Copy backup code, then paste it here."), code, h("div",{class:"row"}, h("button",{class:"btn",type:"button",onclick:()=>{ try{ const t = code.value.trim(); const o = JSON.parse(t.startsWith("{")? t : decodeURIComponent(escape(atob(t)))); if(!o.days) throw 0; S = Object.assign(S,o); save(); toast("Account restored."); go({name:"home"}); }catch(e){ toast("That is not a StratSix backup code. Copy the whole code and try again."); } }},"Restore my account"))));
   const pin = h("input",{class:"input",type:"password",id:"rg-pin",placeholder:"Teacher PIN",style:"max-width:180px"});
   const teacher = h("details",{class:"small"}, h("summary",{style:"cursor:pointer"},"I am the teacher"), h("div",{class:"row",style:"margin-top:8px"}, pin, h("button",{class:"btn sm",type:"button",onclick:()=>{ if(pin.value.trim()===TEACHER_PIN){ S.teacher = true; save(); go({name:"teacher"}); } else toast("That PIN is not correct."); }},"Enter as teacher")));
   return h("main",{class:"page",style:"max-width:720px"}, h("div",{class:"hero-main",style:"margin-bottom:16px"}, h("div",{class:"eyebrow"},"TOEFL iBT® test prep · 2026 format · B2–C1"), h("h1",null,"Sign in to StratSix"), h("p",null,"Sign in with your Google account. Your teacher can then see your work and give you feedback.")), h("div",{class:"panel stack"}, form), h("div",{style:"margin-top:12px"}, restore), h("div",{style:"margin-top:12px"}, teacher));
@@ -8537,8 +8537,8 @@ function viewHome(){
       signedIn() ? h("div",{class:"row"}, h("span",{class:"pill ok"},"Signed in with Google"), h("button",{class:"btn ghost sm",type:"button",onclick:signOutGoogle},"Sign out")) : null,
       h("div",{class:"kv"}, "Started", h("b",null, new Date(S.started).toLocaleDateString())),
       h("div",{class:"kv"}, "Days completed", h("b",null, SECS.reduce((a,s)=>a+secStats(s).done,0)+" / 68")),
-      h("div",{class:"kv"}, "Progress saved on", h("b",null,"this device")),
-      h("button",{class:"btn sm",onclick:()=>go({name:"progress"})},"Send progress to my teacher"))
+      h("div",{class:"kv"}, "Progress saved", h("b",null, signedIn()? "to your account" : "on this device")),
+      h("button",{class:"btn sm",onclick:()=>go({name:"progress"})},"Share a report or back up"))
   );
   const cards = h("div",{class:"sections"}, ...SECS.map(sec=>{
     const s = BS.sections[sec]; const st = secStats(sec);
@@ -8546,7 +8546,10 @@ function viewHome(){
   }));
   const fmtT = h("div",{class:"panel stack"}, h("div",{class:"eyebrow"},"The test at a glance"), h("h2",null,"12 task types, about 90 minutes"), h("div",{class:"tbl-wrap"}, h("table",{class:"format-table"}, h("thead",null,h("tr",null,h("th",null,"Section"),h("th",null,"Task"),h("th",null,"What you do"))), h("tbody",null, ...BS.format.map(r=>h("tr",null, h("td",{class:"sec"},r[0]), h("td",null,r[1]), h("td",{class:"muted"},r[2])))))), h("div",{class:"small muted"},"Reading and Listening are adaptive: your Module 1 result decides whether Module 2 is harder or easier. Writing and Speaking are fixed."));
   const week = h("div",{class:"panel stack"}, h("div",{class:"eyebrow"},"How to use StratSix"), h("h2",null,"Your study routine"), h("ol",{class:"steps"}, ...BS.routine.map(r=>h("li",null,h("div",null,h("b",null,r[0]),h("span",null,r[1]))))));
-  return h("main",{class:"page"}, hero, cards, accessPanel(), simHomeStrip(), h("div",{class:"two",style:"margin-top:16px"}, fmtT, week));
+  const P = progressPanels();
+  const results = h("section",{id:"results",class:"stack",style:"margin-top:16px"}, h("div",{class:"eyebrow"},"Your results"), h("h2",null,"How you are doing"), P.etsPanel, P.accuracy);
+  const more = h("details",{id:"share",class:"panel",style:"margin-top:16px"}, h("summary",{class:"q",style:"cursor:pointer"},"Share a report, back up, and audio settings"), h("div",{class:"stack",style:"margin-top:12px"}, P.send, P.backup));
+  return h("main",{class:"page"}, hero, cards, results, accessPanel(), simHomeStrip(), h("div",{class:"two",style:"margin-top:16px"}, fmtT, week), more);
 }
 function dayMinutes(d){ const m = d.stages.reduce((a,s)=>a+(s.mins||0),0); return m || d.minutes || 60; }
 function durText(m){ const hh = Math.floor(m/60), mm = m%60; return hh? hh+" h"+(mm? " "+mm+" min":"") : mm+" min"; }
@@ -8724,17 +8727,17 @@ async function offerDownload(filename, data){
 }
 async function copyText(txt, fallbackEl, msg){ try{ await navigator.clipboard.writeText(txt); toast(msg || "Copied. Paste it into WhatsApp or an email to your teacher."); }catch(e){ if(fallbackEl){ fallbackEl.hidden=false; fallbackEl.focus(); fallbackEl.select(); } toast("Select the text below and copy it."); } }
 
-function viewProgress(){
+function progressPanels(){
   const agg = taskAgg();
   const bars = h("div",{class:"bars"}, ...Object.keys(TT).filter(k=>agg[k]).map(k=>h("div",{class:"bar-row"}, h("span",null,TT[k]), h("div",{class:"meter"+(pct(agg[k].c,agg[k].t)<60?" red":"")}, h("i",{style:"width:"+pct(agg[k].c,agg[k].t)+"%"})), h("span",{class:"v"}, pct(agg[k].c,agg[k].t)+"%"))));
   const empty = !Object.keys(agg).length;
   const secRows = h("div",{class:"sections"}, ...SECS.map(sec=>{ const st=secStats(sec); return h("div",{class:"panel stack"}, h("div",{class:"row",style:"justify-content:space-between"}, h("h3",null,cap(sec)), h("span",{class:"mono small"}, st.done+"/17")), h("div",{class:"meter"}, h("i",{style:"width:"+pct(st.done,17)+"%"})), h("div",{class:"kv"},"Auto-scored accuracy",h("b",null, st.t? pct(st.c,st.t)+"%":"–")), h("div",{class:"kv"},"Rubric self-score",h("b",null, st.self!=null? st.self.toFixed(1)+" / 5":"–"))); }));
   const rep = buildReport();
   const ta = h("textarea",{class:"textarea",hidden:true,readonly:true,id:"report-text"}); ta.value = rep;
-  const send = h("div",{class:"panel stack"}, h("div",{class:"eyebrow"},"Send to your teacher"), h("h2",null,"Progress report"), h("p",{class:"muted"},"Your report includes day completion, accuracy by task type, mock results, speaking self-scores and the full text of your writing. Send it before each live class."),
+  const send = h("div",{class:"panel stack"}, h("div",{class:"eyebrow"},"Send to your teacher"), h("h2",null,"Progress report"), h("p",{class:"muted"},"Your report includes day completion, accuracy by task type, mock results, speaking self-scores and the full text of your writing. Your teacher can already see your results, so sending the report is optional."),
     h("div",{class:"row"}, h("button",{class:"btn primary",onclick:()=>copyText(rep, ta)},"Copy report"), h("button",{class:"btn",onclick:()=>offerDownload("StratSix-report-"+(S.name||"student").replace(/\s+/g,"-")+".html", reportHTML())},"Download report"), h("button",{class:"btn ghost",onclick:()=>{ ta.hidden=!ta.hidden; }},"Preview")), ta);
   const code = h("textarea",{class:"textarea",style:"min-height:90px",placeholder:"Paste a backup code here to restore progress on this device.",id:"restore-code"});
-  const backup = h("div",{class:"panel stack"}, h("div",{class:"eyebrow"},"Backup and settings"), h("h2",null,"Move to another device"), h("p",{class:"muted small"},"Progress is saved in this browser only. Copy your backup code, then paste it into StratSix on your other device."),
+  const backup = h("div",{class:"panel stack"}, h("div",{class:"eyebrow"},"Backup and settings"), h("h2",null,"Move to another device"), h("p",{class:"muted small"},"Your progress is saved to your account automatically when you are signed in with Google. If you need to move it by hand, copy your backup code and paste it into StratSix on your other device."),
     h("div",{class:"row"}, h("button",{class:"btn",onclick:()=>copyText(btoa(unescape(encodeURIComponent(JSON.stringify(S)))), null)},"Copy backup code"), h("button",{class:"btn",onclick:()=>offerDownload("StratSix-backup.json", JSON.stringify(S))},"Download backup")),
     code, h("div",{class:"row"}, h("button",{class:"btn",onclick:()=>{ try{ const txt = code.value.trim(); const obj = JSON.parse(txt.startsWith("{")? txt : decodeURIComponent(escape(atob(txt)))); if(!obj.days) throw 0; S = Object.assign(S,obj); save(); toast("Progress restored."); render(); }catch(e){ toast("That code is not a StratSix backup. Copy it again and paste the whole code."); } }},"Restore progress")),
     h("hr",{style:"border:0;border-top:1px solid var(--line);width:100%"}),
@@ -8746,7 +8749,8 @@ function viewProgress(){
     h("button",{class:"btn sm",onclick:()=>{ TTS.speak(["W: This is the woman's voice.","M: And this is the man's voice."]); }},"Test the voices"));
   const etsRows = BS.scoredSpeakingDays.map(n=>{ let self=null, t=null; for(const k in S.work){ const w=S.work[k]; if(w && w.day===n && w.kind==="S-ETS") self=w; if(w && w.day===n && w.kind==="S-ETS-T" && w.teacher) t=w.teacher; } const sb = self && self.lr && self.lr.every(x=>x!=null) && self.iv.every(x=>x!=null) ? bandText(estBand(self.lr,self.iv)) : "–"; return h("tr",null, h("td",null,"Day "+n), h("td",{class:"mono"}, sb), h("td",{class:"mono",style:"font-weight:700"}, t? bandText(estBand(t.lr,t.iv)) : "waiting")); });
   const etsPanel = h("div",{class:"panel stack",style:"margin-top:16px"}, h("div",{class:"eyebrow"},"Speaking · test-style scoring"), h("h2",null,"Speaking score reports"), h("div",{class:"tbl-wrap"}, h("table",{class:"format-table"}, h("thead",null,h("tr",null,h("th",null,"Scored day"),h("th",null,"Your self-score"),h("th",null,"Teacher score"))), h("tbody",null,...etsRows))), h("p",{class:"small muted"},"Bands are estimates based on the 0–5 task scores. Only ETS can give an official score."));
-  return h("main",{class:"page"}, h("div",{class:"stack",style:"margin-bottom:16px"}, h("div",{class:"eyebrow"}, S.name||"Student"), h("h1",null,"My progress")), secRows, etsPanel, h("div",{class:"two",style:"margin-top:16px"}, h("div",{class:"panel stack"}, h("div",{class:"eyebrow"},"Auto-scored tasks"), h("h2",null,"Accuracy by task type"), empty? h("p",{class:"muted"},"Nothing scored yet. Your results appear here after you check answers in any practice task.") : bars, h("p",{class:"small muted"},"Red bars are under 60%. Review the strategy day for that task before your next mock.")), send), h("div",{style:"margin-top:16px"}, backup));
+  const accuracy = h("div",{class:"panel stack"}, h("div",{class:"eyebrow"},"Auto-scored tasks"), h("h2",null,"Accuracy by task type"), empty? h("p",{class:"muted"},"Nothing scored yet. Your results appear here after you check answers in any practice task.") : bars, h("p",{class:"small muted"},"Red bars are under 60%. Review the strategy day for that task before your next mock."));
+  return {etsPanel, accuracy, send, backup};
 }
 function voiceRow(label, key, role){
   TTS.load();
@@ -8979,7 +8983,7 @@ function viewSim(){
     h("div",{class:"sim-blueprint"}, ...[["Reading","≈ 28 min","2 modules · 40 questions"],["Listening","≈ 25 min","2 modules · 34 questions"],["Writing","23 min","3 tasks · 12 items"],["Speaking","≈ 8 min","2 tasks · 11 items"]].map(r=>h("div",null, h("b",null,r[0]), h("span",{class:"mono"},r[1]), h("span",null,r[2])))));
   const rules = h("div",{class:"panel stack"}, h("h2",null,"Before you start"), h("ol",{class:"steps"},
     h("li",null,h("div",null,h("b",null,"Block 90 minutes"),h("span",null,"The clock keeps running if you leave, as on the real test. You can resume, but you cannot stop the time."))),
-    h("li",null,h("div",null,h("b",null,"Use headphones and Chrome or Edge"),h("span",null,"Each listening and speaking audio plays once. Check your voice settings in My progress before the test."))),
+    h("li",null,h("div",null,h("b",null,"Use headphones and Chrome or Edge"),h("span",null,"Each listening and speaking audio plays once. Check your voice settings in the Dashboard before the test."))),
     h("li",null,h("div",null,h("b",null,"Have your phone ready"),h("span",null,"Record the whole Speaking section with your phone’s voice recorder, then send it to your Drive folder from your score report."))),
     h("li",null,h("div",null,h("b",null,"Score your writing and speaking"),h("span",null,"Reading, Listening and Build a Sentence are scored automatically. After the test, Claude can score your writing and speaking for you. Your teacher also scores your writing and recording.")))));
   const lists = groups.map(g=>h("section",{class:"stack"}, h("div",{class:"row",style:"justify-content:space-between;align-items:baseline"}, h("h2",null, g==="all"? "Final rehearsal" : cap(g)+" module"), h("span",{class:"small muted"}, g==="all"? "After all four modules" : "Days 1–17")), h("div",{class:"sim-grid"}, ...SIM.plan.filter(p=>p.mod===g).map(card))));
@@ -9096,7 +9100,7 @@ function simIntro(n, T, onStart){
         h("tr",null,h("td",{class:"sec"},"Listening"),h("td",{class:"mono"},"≈ 25 min"),h("td",null,"Each audio plays once. A clock runs on every question. You cannot go back.")),
         h("tr",null,h("td",{class:"sec"},"Writing"),h("td",{class:"mono"},SIM.t.bas+" + "+SIM.t.email+" + "+SIM.t.disc+" min"),h("td",null,"Build a Sentence, Write an Email, Academic Discussion. Each task submits when its clock ends.")),
         h("tr",null,h("td",{class:"sec"},"Speaking"),h("td",{class:"mono"},"≈ 8 min"),h("td",null,"Listen and Repeat, then Take an Interview. No preparation time. Record yourself on your phone."))))),
-      h("div",{class:"row"}, check, h("span",{class:"small muted"},"Use headphones. If the voice sounds robotic, change it in My progress → Audio settings."))),
+      h("div",{class:"row"}, check, h("span",{class:"small muted"},"Use headphones. If the voice sounds robotic, change it in Dashboard → Audio settings."))),
     !TTS.ok? h("div",{class:"no-audio"},"This browser cannot play the listening audio. Open StratSix in Chrome, Edge or Safari before you start.") : null,
     h("div",{class:"panel stack"}, h("label",{for:"sim-ready",style:"display:grid;grid-template-columns:22px minmax(0,1fr);gap:8px;align-items:start"}, ok, h("span",null,"I have about 90 minutes, headphones and my phone ready. I understand the clock keeps running if I leave the test.")), h("div",{class:"row"}, start, h("button",{class:"btn ghost",type:"button",onclick:()=>go({name:"sim"})},"Not now"))));
 }
@@ -9832,7 +9836,6 @@ function render(){
   else if(VIEW.name==="rubrics") v = viewRubrics();
   else if(VIEW.name==="tutorials") v = viewTutorials();
   else if(VIEW.name==="tutorial") v = viewTutorial();
-  else if(VIEW.name==="progress") v = viewProgress();
   else if(VIEW.name==="teacher") v = viewTeacher();
   else if(VIEW.name==="students") v = viewStudents();
   else if(VIEW.name==="feedback") v = viewFeedback();
@@ -9844,7 +9847,7 @@ function render(){
   const cur = root.querySelector('.nav [aria-current="page"]'); if(cur && cur.scrollIntoView){ try{ cur.scrollIntoView({block:"nearest",inline:"center"}); }catch(e){} }
 }
 const tok = (location.hash||"").slice(1);
-if(SECS.includes(tok)) VIEW = {name:"sec",sec:tok,day:lastDay(tok)}; else if(["rubrics","progress","teacher","sim","feedback"].includes(tok)) VIEW={name:tok};
+if(SECS.includes(tok)) VIEW = {name:"sec",sec:tok,day:lastDay(tok)}; else if(["rubrics","teacher","sim","feedback"].includes(tok)) VIEW={name:tok};
 render();
 if(SB){
   SB.auth.getSession().then(r=>{ const ses = r && r.data && r.data.session; if(ses){ return adoptSession(ses).then(ok=>{ if(ok){ render(); refreshAccess(); } }); } else if(S.account && S.account.uid){ S.account = Object.assign({}, S.account, {uid:"", role:""}); save(); render(); } }).catch(()=>{});
