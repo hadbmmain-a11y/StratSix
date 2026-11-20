@@ -7318,7 +7318,7 @@ if(!S.tut) S.tut = {};
 if(!S.started) S.started = new Date().toISOString();
 function persist(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} }
 let onSaveHook = null;
-function save(){ persist(); if(onSaveHook){ try{ onSaveHook(); }catch(e){} } }
+function save(){ persist(); if(onSaveHook){ try{ onSaveHook(); }catch(e){} } try{ syncSoon(); }catch(e){} }
 const TEACHER_PIN = "BS2026";
 /* Google Drive connector (Apps Script web app). Fill both values after the teacher deploys StratSix-Drive.gs. */
 const DRIVE_APP = { url: "https://script.google.com/macros/s/AKfycbzrC0TB5waVY4iIwj6GpE85YzgdkxSX_ZFe6KxFubduUrLnnaKOWkzwqcqToTe9CKRE/exec", code: "XUKGSTDR" };
@@ -7331,6 +7331,20 @@ try{ if(window.supabase && window.supabase.createClient) SB = window.supabase.cr
 function sbOn(){ return !!SB; }
 function signedIn(){ return !!(S.account && S.account.uid); }
 function sbErr(e){ const m = String((e && e.message) || e || ""); if(/row-level security|permission|not allowed/i.test(m)) return "You do not have permission to do that."; if(/Failed to fetch|NetworkError|network/i.test(m)) return "No connection. Check your internet and try again."; return m || "Not saved. Try again."; }
+/* ---- progress sync: the student's progress is saved to Supabase a few seconds after each change ---- */
+let _syncT = null;
+function progressSummary(){ const sections = {}; SECS.forEach(sec=>{ try{ const st = secStats(sec); sections[sec] = {done:st.done,total:st.total,c:st.c,t:st.t,self:st.self}; }catch(e){} }); return {sections, mocks:Object.keys(S.res||{}).filter(k=>k.endsWith("-summary")).length, last:S.last||null, started:S.started||null}; }
+function syncSoon(){ if(!SB || !signedIn()) return; clearTimeout(_syncT); _syncT = setTimeout(syncNow, 4000); }
+async function syncNow(){ if(!SB || !signedIn()) return; try{ const st = Object.assign({}, S); delete st.account; await SB.from("progress").upsert({user_id:S.account.uid, state:st, summary:progressSummary(), updated_at:new Date().toISOString()}, {onConflict:"user_id"}); }catch(e){} }
+async function restoreProgress(){
+  if(!SB || !signedIn()) return;
+  try{
+    const r = await SB.from("progress").select("state").eq("user_id", S.account.uid).maybeSingle(); const d = r && r.data;
+    const hasLocal = Object.keys(S.days||{}).length || Object.keys(S.work||{}).length || Object.keys(S.res||{}).length;
+    if(d && d.state && !hasLocal){ const acc = S.account; S = Object.assign(S, d.state); S.account = acc; persist(); render(); toast("Your saved progress was restored."); }
+    else if(hasLocal) syncNow();
+  }catch(e){}
+}
 async function adoptSession(session){
   const u = session && session.user; if(!u) return false;
   const meta = u.user_metadata || {}; const prev = S.account || {};
@@ -7339,7 +7353,7 @@ async function adoptSession(session){
   try{ const r = await SB.from("profiles").select("role").eq("id", u.id).maybeSingle(); if(r && r.data && r.data.role) role = r.data.role; }catch(e){}
   S.account = Object.assign({}, prev, {name, email:String(u.email||"").toLowerCase(), uid:u.id, role, created:prev.created || new Date().toISOString()});
   if(name) S.name = name;
-  save(); return true;
+  save(); setTimeout(restoreProgress,0); return true;
 }
 function googleSignIn(){
   if(!SB){ toast("Sign-in is not available right now. Check your internet connection and reload the page."); return; }
@@ -8372,8 +8386,64 @@ let VIEW = {name:"home"};
 const root = document.getElementById("app");
 function go(v){ clearTimers(); onSaveHook = null; VIEW = v; if(v.sec){ S.last = {sec:v.sec, day:v.day}; save(); } render(); window.scrollTo(0,0); }
 
+/* ---------------- Teacher: Students tab ---------------- */
+const STU = {rows:null, sel:null, err:"", loading:false};
+async function loadStudents(){
+  STU.loading = true; STU.err = ""; render();
+  try{
+    const [p, pr, sub] = await Promise.all([
+      SB.from("profiles").select("id,full_name,email,role,created_at").order("full_name"),
+      SB.from("progress").select("user_id,summary,updated_at"),
+      SB.from("submissions").select("id,user_id,section,day,task,app,prompt,response_text,words,audio_path,ai_result,teacher_score,teacher_note,created_at").order("created_at",{ascending:false}).limit(1000)]);
+    for(const x of [p,pr,sub]) if(x.error) throw x.error;
+    const pm = {}; pr.data.forEach(x=>{ pm[x.user_id] = x; }); const sm = {}; sub.data.forEach(x=>{ (sm[x.user_id] = sm[x.user_id]||[]).push(x); });
+    STU.rows = p.data.map(u=>{ const subs = sm[u.id]||[]; const prog = pm[u.id]; const last = [subs[0] && subs[0].created_at, prog && prog.updated_at].filter(Boolean).sort().pop() || null;
+      return {p:u, prog, subs, last, unscored:subs.filter(x=>x.teacher_score==null).length}; });
+    STU.rows.sort((a,b)=> (a.p.role==="teacher") - (b.p.role==="teacher") || String(b.last||"").localeCompare(String(a.last||"")));
+    if(STU.sel){ STU.sel = STU.rows.find(r=>r.p.id===STU.sel.p.id) || null; }
+  }catch(e){ STU.err = sbErr(e); }
+  STU.loading = false; render();
+}
+function fmtWhen(t){ if(!t) return "–"; try{ return new Date(t).toLocaleString([], {dateStyle:"medium", timeStyle:"short"}); }catch(e){ return String(t); } }
+function stuBar(pctv){ return h("div",{style:"height:8px;background:var(--line);border-radius:6px;overflow:hidden"}, h("div",{style:"height:8px;width:"+Math.max(0,Math.min(100,pctv))+"%;background:var(--gold,#F2C14E)"})); }
+function stuSubCard(x){
+  const ai = aiParse(x.ai_result);
+  const audio = h("div",null);
+  const parts = [h("div",{class:"row",style:"justify-content:space-between;gap:8px;flex-wrap:wrap"}, h("b",null, x.section+(x.day?" · Day "+x.day:"")+" · "+x.task+(/mock/.test(x.app||"")?" · mock":"")), h("span",{class:"small muted"}, fmtWhen(x.created_at)+(x.words? " · "+x.words+" words":"")))];
+  if(x.prompt) parts.push(h("details",null, h("summary",{class:"small muted",style:"cursor:pointer"},"Task prompt"), h("p",{class:"small",style:"white-space:pre-wrap"}, x.prompt)));
+  if(x.response_text) parts.push(h("p",{style:"white-space:pre-wrap;margin:6px 0"}, x.response_text));
+  if(x.audio_path){ parts.push(audio); audio.append(h("button",{class:"btn sm",type:"button",onclick:async(ev)=>{ ev.target.disabled = true; try{ const sg = await SB.storage.from("recordings").createSignedUrl(x.audio_path, 3600); if(sg.error) throw sg.error; audio.innerHTML = ""; audio.append(h("audio",{controls:"",src:sg.data.signedUrl,style:"width:100%"})); }catch(e){ ev.target.disabled = false; toast(sbErr(e)); } }},"Load recording")); }
+  parts.push(h("div",{class:"row small",style:"gap:12px;flex-wrap:wrap"},
+    h("span",{class:"pill"+(ai&&!ai.err&&ai.score?"":" warn")}, ai&&ai.err? "AI: not scored" : ai&&ai.score? "AI "+ai.score+"/5"+(ai.band? " · Band ≈ "+ai.band : "") : "AI: in the queue"),
+    h("span",{class:"pill"+(x.teacher_score==null?" warn":"")}, x.teacher_score==null? "Teacher: not scored" : "Teacher "+x.teacher_score+"/5"),
+    x.teacher_note? h("span",{class:"muted"}, x.teacher_note) : null));
+  return h("div",{class:"panel stack",style:"gap:6px"}, ...parts);
+}
+function viewStudents(){
+  if(!(S.account && S.account.role==="teacher")) return h("main",{class:"page"}, h("div",{class:"panel stack"}, h("h1",null,"Students"), h("p",null,"This page is for the teacher. Sign in with the teacher Google account (Teacher guide → Review queue).")));
+  if(STU.rows===null && !STU.loading && !STU.err) setTimeout(loadStudents,0);
+  const top = h("div",{class:"row",style:"justify-content:space-between;align-items:end;margin-bottom:12px;flex-wrap:wrap;gap:8px"}, h("div",{class:"stack"}, h("div",{class:"eyebrow"},"Teacher"), h("h1",null,"Students")), h("button",{class:"btn sm",type:"button",onclick:loadStudents},STU.loading?"Loading…":"Refresh"));
+  if(STU.err) return h("main",{class:"page"}, top, h("div",{class:"panel"}, h("p",null,STU.err)));
+  if(STU.rows===null) return h("main",{class:"page"}, top, h("p",{class:"muted"},"Loading students…"));
+  if(STU.sel){
+    const r = STU.sel, u = r.p, secs = (r.prog && r.prog.summary && r.prog.summary.sections) || {};
+    const rows = SECS.map(sec=>{ const st = secs[sec]; if(!st) return h("div",{class:"small muted"}, cap(sec)+": no progress synced yet"); const pc = st.total? Math.round(100*st.done/st.total) : 0;
+      return h("div",{class:"stack",style:"gap:4px"}, h("div",{class:"row small",style:"justify-content:space-between"}, h("b",null,cap(sec)), h("span",{class:"muted"}, st.done+"/"+st.total+" days"+(st.t? " · accuracy "+pct(st.c,st.t)+"%":"")+(st.self!=null? " · self-score "+Number(st.self).toFixed(1)+"/5":""))), stuBar(pc)); });
+    const mocks = r.prog && r.prog.summary && r.prog.summary.mocks;
+    return h("main",{class:"page stack",style:"gap:16px"},
+      h("div",{class:"row"}, h("button",{class:"btn sm",type:"button",onclick:()=>{ STU.sel = null; render(); }},"← All students")),
+      h("div",{class:"stack"}, h("div",{class:"eyebrow"}, u.role==="teacher"? "Teacher account" : "Student"), h("h1",null,u.full_name||u.email), h("div",{class:"small muted"}, u.email+" · joined "+fmtWhen(u.created_at)+" · last activity "+fmtWhen(r.last))),
+      h("div",{class:"panel stack"}, h("h2",null,"Progress"), ...rows, mocks? h("div",{class:"small muted"},"Mock-test results saved: "+mocks) : null, r.prog? h("div",{class:"small muted"},"Progress last synced "+fmtWhen(r.prog.updated_at)) : null),
+      h("div",{class:"stack"}, h("h2",null,"Submitted work ("+r.subs.length+")"), r.unscored? h("p",{class:"small muted"}, r.unscored+" without your score. Add scores in Teacher guide → Review queue.") : null, r.subs.length? h("div",{class:"stack"}, ...r.subs.map(stuSubCard)) : h("p",{class:"muted"},"Nothing submitted yet.")));
+  }
+  const list = STU.rows.map(r=>{ const u = r.p; let done = 0, total = 0; const secs = (r.prog && r.prog.summary && r.prog.summary.sections) || {}; SECS.forEach(sec=>{ if(secs[sec]){ done += secs[sec].done||0; total += secs[sec].total||0; } });
+    return h("button",{class:"tq-item",type:"button",onclick:()=>{ STU.sel = r; render(); window.scrollTo(0,0); }},
+      h("span",null, h("b",null,u.full_name||u.email), h("div",{class:"small muted"}, u.email+(u.role==="teacher"?" · teacher account":""))),
+      h("span",{class:"small",style:"text-align:right"}, h("div",null, r.prog? done+"/"+total+" days" : "no progress yet"), h("div",{class:"muted"}, r.subs.length+" submitted"+(r.unscored? " · "+r.unscored+" to score":"")), h("div",{class:"muted"}, fmtWhen(r.last)))); });
+  return h("main",{class:"page"}, top, list.length? h("div",{class:"stack",style:"gap:8px"}, ...list) : h("p",{class:"muted"},"No students have signed in yet."));
+}
 function navBar(){
-  const items = [["home","Dashboard"],["reading","Reading"],["listening","Listening"],["writing","Writing"],["speaking","Speaking"],["sim","Test Simulator"],["feedback","My feedback"],["tutorials","Tutorials"],["rubrics","Rubrics"],["progress","My progress"],["teacher","Teacher guide"]];
+  const items = [["home","Dashboard"],["reading","Reading"],["listening","Listening"],["writing","Writing"],["speaking","Speaking"],["sim","Test Simulator"],["feedback","My feedback"],["tutorials","Tutorials"],["rubrics","Rubrics"],["progress","My progress"],...((S.account&&S.account.role==="teacher")? [["students","Students"]] : []),["teacher","Teacher guide"]];
   const cur = VIEW.sec || (VIEW.name==="tutorial"? "tutorials" : (VIEW.name==="simrun"||VIEW.name==="simreport")? "sim" : VIEW.name);
   return h("header",{class:"bar"}, h("div",{class:"bar-in"},
     h("button",{class:"brand",onclick:()=>go({name:"home"}),"aria-label":"StratSix dashboard"}, brandMark(), h("span",{class:"brand-name"},"StratSix", h("span",null,"· iBT"))),
@@ -9764,6 +9834,7 @@ function render(){
   else if(VIEW.name==="tutorial") v = viewTutorial();
   else if(VIEW.name==="progress") v = viewProgress();
   else if(VIEW.name==="teacher") v = viewTeacher();
+  else if(VIEW.name==="students") v = viewStudents();
   else if(VIEW.name==="feedback") v = viewFeedback();
   else if(VIEW.name==="sim") v = viewSim();
   else if(VIEW.name==="simreport") v = viewSimReport();
@@ -9780,7 +9851,7 @@ if(SB){
   SB.auth.onAuthStateChange((ev, ses)=>{ if(ev==="SIGNED_IN" && ses && !signedIn()){ setTimeout(()=>{ adoptSession(ses).then(()=>{ render(); refreshAccess(); }); }, 0); } });
 }
 refreshAccess();
-window.__BS_TEST = {buildCW, ssPost, ssGet, signedIn};
+window.__BS_TEST = {buildCW, ssPost, ssGet, signedIn, syncNow, loadStudents};
 })();
 
 </script>
