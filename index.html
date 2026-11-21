@@ -7809,6 +7809,7 @@ function aiFeedbackPanel(b, kind, ta, key){
 /* Writing task */
 R.write = (b, ctx) => {
   const key = ctx.key; const saved = S.work[key]||{};
+  const techBox = b.checklist? (()=>{ const ck = (saved.ck||[]).slice(); return h("div",{class:"checklist"}, h("div",{class:"eyebrow"},"Your checklist: tick each item as you write"), ...b.checklist.map((c,i)=>{ const cb = h("input",{type:"checkbox"}); cb.checked = !!ck[i]; cb.addEventListener("change",()=>{ ck[i] = cb.checked; S.work[key] = Object.assign(S.work[key]||{}, {ck:b.checklist.map((_,k)=>!!ck[k])}); save(); }); return h("label",null,cb,h("span",{html:c})); })); })() : null;
   const kind = b.kind; const mins = b.minutes || (kind==="email"?7:10);
   let card;
   if(kind==="email"){
@@ -7826,10 +7827,10 @@ R.write = (b, ctx) => {
   ta.addEventListener("input",()=>{ wc.textContent = words(ta.value)+" words"; S.work[key]=Object.assign(S.work[key]||{}, {text:ta.value, words:words(ta.value), kind:"W-"+(kind==="email"?"EM":"AD"), title:b.title||b.subject||b.course}); save(); });
   const after = h("div",{class:"stack",hidden:!saved.submitted});
   const doneBtn = h("button",{class:"btn primary",type:"button"},"I’m finished: review my writing");
-  doneBtn.addEventListener("click",()=>{ if(t){ used = t.stop(); } S.work[key]=Object.assign(S.work[key]||{}, {text:ta.value, words:words(ta.value), submitted:true, secs:used, kind:"W-"+(kind==="email"?"EM":"AD"), title:b.title||b.subject||b.course, at:new Date().toISOString()}); save(); after.hidden=false; doneBtn.hidden=true; after.scrollIntoView({behavior:"smooth",block:"start"}); });
+  doneBtn.addEventListener("click",()=>{ if(b.checklist){ const ck = (S.work[key]||{}).ck||[]; if(!b.checklist.every((_,i)=>ck[i])){ toast("Tick every item on your checklist first."); return; } } if(t){ used = t.stop(); } S.work[key]=Object.assign(S.work[key]||{}, {text:ta.value, words:words(ta.value), submitted:true, secs:used, kind:"W-"+(kind==="email"?"EM":"AD"), title:b.title||b.subject||b.course, at:new Date().toISOString()}); save(); after.hidden=false; doneBtn.hidden=true; after.scrollIntoView({behavior:"smooth",block:"start"}); });
   const checklist = h("div",{class:"checklist"}, ...BS.checklists[kind].map((c,i)=>h("label",null, h("input",{type:"checkbox",id:"ck-"+key+"-"+i}), h("span",{html:c}))));
   const portfolio = ()=>{ const w = S.work[key]||{}; const kp = key.split("-"); return "StratSix · "+((S.account&&S.account.name)||"")+" · "+(key.indexOf("writing2-")===0? "Writing II" : "Writing I")+" Day "+kp[1]+" · "+(kind==="email"?"Write an Email":"Academic Discussion")+" · "+(b.title||b.subject||b.course||"")+"\n"+new Date().toLocaleDateString()+" · "+words(ta.value)+" words"+(w.secs? " · "+fmt(w.secs)+" used":"")+(w.rubric? " · self-score "+Object.entries(w.rubric).map(([a,v])=>a+" "+v).join(", "):"")+"\n\n"+ta.value+"\n\n――――――――――\n"; };
-  after.append(h("h4",null,"1. Check your response"), checklist, h("h4",null,"2. Score yourself with the rubric"), rubricPicker(kind==="email"?"email":"discussion", key), h("h4",null,"3. Compare with a model response"), h("div",{class:"model"}, h("div",{class:"eyebrow"},"Model response · "+words(b.model.replace(/<[^>]+>/g," "))+" words"), h("div",{html:b.model})), b.notes? h("div",{class:"why",html:b.notes}):null);
+  after.append(...(b.noScore? [] : [h("h4",null,"1. Check your response"), checklist, h("h4",null,"2. Score yourself with the rubric"), rubricPicker(kind==="email"?"email":"discussion", key)]), h("h4",null,(b.noScore?"1":"3")+". Compare with a model response"), h("div",{class:"model"}, h("div",{class:"eyebrow"},"Model response · "+words(b.model.replace(/<[^>]+>/g," "))+" words"), h("div",{html:b.model})), b.notes? h("div",{class:"why",html:b.notes}):null);
   const taskName = kind==="email"?"Email":"Academic Discussion";
   const wMod = key.indexOf("writing2-")===0? "[Writing II · Day "+key.split("-")[1]+"] " : "[Writing I · Day "+key.split("-")[1]+"] ";
   const wPrompt = wMod + (kind==="email"? String(b.scenario+" Points: "+b.bullets.join(" | ")+" To: "+b.to+" Subject: "+b.subject).replace(/<[^>]+>/g,"") : String("Course: "+b.course+". Professor: "+b.question+" "+b.posts.map(p=>p[0]+": "+p[1]).join(" ")).replace(/<[^>]+>/g,""));
@@ -7844,11 +7845,11 @@ R.write = (b, ctx) => {
     catch(e){ sendBtn.textContent = "Send for AI feedback"; sendMsg.textContent = e.message; toast(e.message); }
     finally{ sendBtn.disabled = false; }
   });
-  after.append(h("h4",null,"4. Send for AI feedback"));
+  after.append(h("h4",null,(b.noScore?"2":"4")+". Send for AI feedback"));
   after.append(signedIn()
     ? h("div",{class:"why"}, h("b",null,"Send to your teacher. "), "Your response is saved for your teacher. Claude scores it at the next scoring run and your teacher adds a score.", h("div",{class:"send-panel",style:"margin-top:8px"}, h("div",{class:"row"}, sendBtn, h("button",{class:"btn sm",type:"button",onclick:()=>copyText(portfolio(), null, "Copied.")},"Copy only")), sendMsg))
     : h("div",{class:"why"}, h("b",null,"Sign in to send. "), "Sign in with Google to send your response to your teacher and receive feedback.", h("div",{class:"row",style:"margin-top:8px"}, h("button",{class:"btn sm primary",type:"button",onclick:googleSignIn},"Sign in with Google"), h("button",{class:"btn sm",type:"button",onclick:()=>copyText(portfolio(), null, "Copied.")},"Copy my response"))));
-  return h("div",{class:"stack"}, card, h("div",{class:"editor-foot"}, h("div",{class:"row"}, startBtn, timer), wc), ta, h("div",{class:"row"}, saved.submitted? null : doneBtn), after);
+  return h("div",{class:"stack"}, card, techBox, h("div",{class:"editor-foot"}, h("div",{class:"row"}, startBtn, timer), wc), ta, h("div",{class:"row"}, saved.submitted? null : doneBtn), after);
 };
 
 /* ---------------- StratSix: on-site recording, transcripts and Drive sending ---------------- */
@@ -8562,7 +8563,7 @@ function dayReqs(sec, day){
       case "mcq": case "cw": case "listen": case "response": case "bas": case "dictation": ok = !!S.res[key]; break;
       case "mock": ok = !!S.res[key+"-summary"]; break;
       case "hardset": ok = !!((S.hard||{})[key]||{}).passed; break;
-      case "write": ok = !!w.submitted && rubricDone(w.rubric, b.kind==="email"?"email":"discussion"); break;
+      case "write": ok = !!w.submitted && (b.noScore? (!b.checklist || b.checklist.every((_,i)=>(w.ck||[])[i])) : rubricDone(w.rubric, b.kind==="email"?"email":"discussion")); break;
       case "interview": ok = rubricDone(w.rubric, "interview"); break;
       case "repeat": { const m = w.marks||[]; ok = b.items.every((_,i)=>m[i]!=null); break; }
       case "typing": ok = w.wpm!=null; break;
@@ -8572,7 +8573,7 @@ function dayReqs(sec, day){
       case "think": ok = !!w.hwDone; break;
       case "reflect": { const a = S.reflect[key]||[]; ok = b.prompts.every((_,i)=>(a[i]||"").trim().length>=3); break; }
     }
-    if(ok!==null) out.push({label:(st.title||STAGE[st.kind])+": "+REQ_LABEL[b.t], ok, id:"blk-"+key});
+    if(ok!==null) out.push({label:(st.title||STAGE[st.kind])+": "+REQ_LABEL[b.t], ok, id:"blk-"+key, si});
   }));
   const sc = []; day.stages.forEach((st,si)=>st.blocks.forEach((b,bi)=>{ if(ACC_TYPES.includes(b.t)){ const k = dk+"-"+si+"-"+bi; sc.push({k, r:S.res[k], label:(st.title||STAGE[st.kind])}); } }));
   if(sc.length){
@@ -8603,6 +8604,7 @@ function viewSection(){
   const dk = dayKey(sec,day.n);
   const head = h("div",{class:"sheet-head"}, h("div",{class:"row",style:"justify-content:space-between"}, h("span",{class:"eyebrow"}, s.title+" · Day "+day.n+" of 17"), (S.days[dk]||{}).done? h("span",{class:"pill ok"},"Completed") : null), h("h1",null, day.title), h("div",{class:"meta"}, h("span",{class:"pill"}, day.task), h("span",{class:"pill plain"}, "≈ "+durText(dayMinutes(day))+" of student work"), day.level? h("span",{class:"pill plain"}, day.level):null), h("p",{class:"objective",html:"<b>By the end of today:</b> "+day.objective}), day.live? h("div",{class:"live"}, h("span",{class:"pill red"},"Live class"), h("span",{html:day.live})) : null);
   const stages = day.stages.map((st,si)=>h("section",{class:"stage"}, h("div",{class:"stage-head"}, h("span",{class:"stage-no"}, "STAGE "+(si+1)+" / "+day.stages.length), h("h3",null, st.title || STAGE[st.kind]), h("span",{class:"pill plain"}, STAGE[st.kind]||st.kind), st.mins? h("span",{class:"pill plain"}, st.mins+" min"):null), h("div",{class:"stage-body"}, ...st.blocks.map((b,bi)=>h("div",{class:"blk",id:"blk-"+dk+"-"+si+"-"+bi}, renderBlock(b, {key:dk+"-"+si+"-"+bi})))) ));
+  const stageBodies = stages.map(sec=>sec.querySelector(".stage-body")); const lockEls = stages.map((sec,si)=>{ const l = h("div",{class:"why",hidden:true,html:"🔒 <b>Locked.</b> Finish the previous activity to open this one."}); stageBodies[si].before(l); return l; });
   const prev = s.days.find(d=>d.n===day.n-1), next = s.days.find(d=>d.n===day.n+1);
   const meter = h("i",{style:"width:0%"}); const count = h("span",{class:"mono small"});
   const headStatus = h("div",{class:"day-status"}, h("div",{class:"row",style:"justify-content:space-between"}, h("span",{class:"small",style:"font-weight:600"},"Today’s activities"), count), h("div",{class:"meter"}, meter));
@@ -8615,6 +8617,7 @@ function viewSection(){
   const pillEl = foot.querySelector(".pill");
   function refresh(){
     const reqs = dayReqs(sec, day); const n = reqs.filter(r=>r.ok).length; const all = n===reqs.length;
+    if(day.lock && !S.teacher){ let open = true; stages.forEach((sc,si)=>{ stageBodies[si].hidden = !open; lockEls[si].hidden = open; if(open && !reqs.filter(r=>r.si===si).every(r=>r.ok)) open = false; }); }
     if(all && !(S.days[dk]||{}).done){ S.days[dk] = {done:true, at:new Date().toISOString()}; persist(); celebrate(); toast(next? "Day "+day.n+" complete. Day "+next.n+" opens tomorrow." : "Day "+day.n+" complete. You finished the "+s.title+" section!"); }
     const done = !!(S.days[dk]||{}).done;
     count.textContent = n+" / "+reqs.length; meter.style.width = pct(n,reqs.length)+"%";
@@ -9970,6 +9973,7 @@ __writingPatch();
     Q("Which phrase is correct? (Day 2)", ["a big old wooden table","a wooden big old table","a old wooden big table","a big wooden old table"], 0, "Adjective order: size, age, material.")
   ];
   const baSecond = ext.blocks[0];
+  d4.lock = true;
   d4.stages = [
     learn,
     {kind:"practice", title:"Controlled practice: choose the correct one", mins:6, blocks:[{t:"mcq", tt:"X-Q", qs:A}]},
@@ -10045,6 +10049,8 @@ __writingPatch();
     FTE("[[Would]] you [[mind]] [[to send]] me the syllabus [[please]]?", 2, "<i>Would you mind</i> is followed by <i>-ing</i>: <i>sending</i>."),
     FTE("[[I would be]] grateful if you [[can]] [[let]] me [[know]].", 1, "Use <i>could</i> after <i>I would be grateful if you</i>.")
   ];
+  const CK7 = ["My first sentence states the purpose (Technique 1).","Each bullet has its own sentence, in order (Technique 2).","I used at least two softening expressions (Technique 5).","I read my email once before sending it."];
+  d7.lock = true;
   d7.stages = [
     tut, learn,
     {kind:"check", title:"Strategy questions: think and write", mins:7, blocks:[{t:"think", task:"Strategy questions", btn:"Submit my answers", intro:"<b>Required before the model.</b> Think about the strategy you just read. There is no single correct answer, but you must give reasons. Your teacher will read your answers.", prompts:[
@@ -10059,8 +10065,8 @@ __writingPatch();
       {q:"The writer gives the reason (final examinations finish on 20 June) before the request. Imagine the order reversed: request first, then reason. How might the dean react differently? Which order is better here, and why?", min:40},
       {q:"The model offers a second option: “Should an extension prove impossible…”. What does this show the dean about the writer? Could this paragraph ever backfire? Explain.", min:40},
       {q:"If you only had 80 words, which sentence in the model would you cut, and what is the risk of cutting it? Which sentence must stay?", min:40}]}]},
-    {kind:"apply", title:"Your turn: use all three techniques", mins:20, blocks:[{t:"habit", items:["My first sentence states the purpose (Technique 1).","Each bullet has its own sentence, in order (Technique 2).","I used at least two softening expressions (Technique 5)."]}].concat(turn.blocks)},
-    {kind:"apply", title:"Second email: apply the techniques again", mins:20, blocks:[ext.blocks[0]]},
+    {kind:"apply", title:"Your turn: use all three techniques", mins:20, blocks:turn.blocks.map(b=>Object.assign({}, b, {noScore:true, checklist:CK7}))},
+    {kind:"apply", title:"Second email: apply the techniques again", mins:20, blocks:[Object.assign({}, ext.blocks[0], {noScore:true, checklist:CK7})]},
     {kind:"habit", title:"Daily homework: think and write", mins:12, blocks:[{t:"think", prompts:[
       {q:"Look at two openings. A: “I hope you are well. I wanted to ask you something.” B: “I am writing to request a short extension for my essay due on Friday.” Which would you prefer to receive if you were the professor? Give two reasons. Then explain what could go wrong if every email started like A.", min:50},
       {q:"A classmate says: “Softening phrases like ‘I was wondering whether’ make you sound weak. Strong writers are direct.” Do you agree? Think about the reader, the situation and the result. Give one situation where being direct is better and one where softening is better.", min:50}],
