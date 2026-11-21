@@ -2,6 +2,7 @@ import asyncio, json
 from playwright.async_api import async_playwright
 FAKE = r"""
 (()=>{
+  window.__BS_ENABLE_TEST=true;
   window.__srv = JSON.parse(localStorage.getItem('__srv')||'{}');  // uid -> {state,updated_at}
   window.__fail = null; window.__failSel = false; window.__ups = 0;
   window.__sess = null;
