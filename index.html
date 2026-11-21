@@ -158,6 +158,7 @@ button{font:inherit;color:inherit}
 .meter > i{display:block;height:100%;background:var(--accent);border-radius:99px}
 .meter.red > i{background:var(--red)}
 .kv{display:flex;justify-content:space-between;gap:8px;font-size:.85rem;color:var(--muted)}
+.sync-bad{color:#B42318!important}
 .kv b{color:var(--ink);font-family:var(--f-mono);font-weight:500}
 
 .format-table{width:100%;border-collapse:collapse;font-size:.9rem}
@@ -7389,7 +7390,7 @@ if(!S.tut) S.tut = {};
 if(!S.started) S.started = new Date().toISOString();
 function persist(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} }
 let onSaveHook = null;
-function save(){ persist(); if(onSaveHook){ try{ onSaveHook(); }catch(e){} } try{ syncSoon(); }catch(e){} }
+function save(){ S._mod = Date.now(); persist(); if(onSaveHook){ try{ onSaveHook(); }catch(e){} } try{ syncSoon(); }catch(e){} }
 const TEACHER_PIN = "BS2026";
 /* Google Drive connector (Apps Script web app). Fill both values after the teacher deploys StratSix-Drive.gs. */
 const DRIVE_APP = { url: "https://script.google.com/macros/s/AKfycbzrC0TB5waVY4iIwj6GpE85YzgdkxSX_ZFe6KxFubduUrLnnaKOWkzwqcqToTe9CKRE/exec", code: "XUKGSTDR" };
@@ -7402,22 +7403,102 @@ try{ if(window.supabase && window.supabase.createClient) SB = window.supabase.cr
 function sbOn(){ return !!SB; }
 function signedIn(){ return !!(S.account && S.account.uid); }
 function sbErr(e){ const m = String((e && e.message) || e || ""); if(/row-level security|permission|not allowed/i.test(m)) return "You do not have permission to do that."; if(/Failed to fetch|NetworkError|network/i.test(m)) return "No connection. Check your internet and try again."; return m || "Not saved. Try again."; }
-/* ---- progress sync: the student's progress is saved to Supabase a few seconds after each change ---- */
-let _syncT = null;
+/* ---- progress sync: saved to Supabase a few seconds after each change.
+   Rules: (1) never write before the account copy has been read and merged; (2) check the server's error;
+   (3) show the real state; (4) data on this device belongs to one account (S.owner) and is cleared on sign-out or account change. ---- */
+let _syncT = null, _syncing = false, _again = false, _restoring = false, _retry = 0, _retryT = null;
+const SYNC = {state:"idle", err:"", restored:false};
+function isObj(x){ return !!x && typeof x==="object" && !Array.isArray(x); }
+function syncDirty(){ return !S._remoteAt || (S._mod||0) > (S._pushed||0); }
+function syncLabel(){
+  if(!signedIn()) return "on this device";
+  if(SYNC.state==="saving") return "Saving…";
+  if(SYNC.state==="offline") return "Offline: will save when you reconnect";
+  if(SYNC.state==="error") return "Not saved yet ("+SYNC.err+"). Retrying.";
+  if(!SYNC.restored) return "Checking your account…";
+  return syncDirty() ? "Changes waiting to save" : "Saved to your account";
+}
+function setSync(state, err){
+  SYNC.state = state; SYNC.err = err || "";
+  try{ const el = document.getElementById("sync-status"); if(el){ el.textContent = syncLabel(); el.className = (state==="error"||state==="offline") ? "sync-bad" : ""; } }catch(e){}
+}
 function progressSummary(){ const sections = {}; SECS.forEach(sec=>{ try{ const st = secStats(sec); sections[sec] = {done:st.done,total:st.total,c:st.c,t:st.t,self:st.self}; }catch(e){} }); return {sections, mocks:Object.keys(S.res||{}).filter(k=>k.endsWith("-summary")).length, last:S.last||null, started:S.started||null}; }
 function syncSoon(){ if(!SB || !signedIn()) return; clearTimeout(_syncT); _syncT = setTimeout(syncNow, 4000); }
-async function syncNow(){ if(!SB || !signedIn()) return; try{ const st = Object.assign({}, S); delete st.account; await SB.from("progress").upsert({user_id:S.account.uid, state:st, summary:progressSummary(), updated_at:new Date().toISOString()}, {onConflict:"user_id"}); }catch(e){} }
-async function restoreProgress(){
-  if(!SB || !signedIn()) return;
-  try{
-    const r = await SB.from("progress").select("state").eq("user_id", S.account.uid).maybeSingle(); const d = r && r.data;
-    const hasLocal = Object.keys(S.days||{}).length || Object.keys(S.work||{}).length || Object.keys(S.res||{}).length;
-    if(d && d.state && !hasLocal){ const acc = S.account; S = Object.assign(S, d.state); S.account = acc; persist(); render(); toast("Your saved progress was restored."); }
-    else if(hasLocal) syncNow();
-  }catch(e){}
+function syncFail(e){
+  const off = (typeof navigator!=="undefined" && navigator.onLine===false) || /Failed to fetch|NetworkError|network/i.test(String((e&&e.message)||e||""));
+  setSync(off?"offline":"error", off?"":sbErr(e));
+  clearTimeout(_retryT); const wait = [5000,15000,45000,120000][Math.min(_retry++,3)]; _retryT = setTimeout(()=>{ SYNC.restored ? syncNow() : restoreProgress(); }, wait);
 }
+async function syncNow(){
+  if(!SB || !signedIn()) return false;
+  if(!SYNC.restored){ restoreProgress(); return false; }      /* never overwrite the account copy before reading it */
+  if(_syncing){ _again = true; return false; }
+  _syncing = true; setSync("saving");
+  const stamp = S._mod || 0, uid = S.account.uid;
+  try{
+    const st = Object.assign({}, S); ["account","owner","_mod","_pushed","_remoteAt"].forEach(k=>delete st[k]);
+    const at = new Date().toISOString();
+    const r = await SB.from("progress").upsert({user_id:uid, state:st, summary:progressSummary(), updated_at:at}, {onConflict:"user_id"});
+    if(r && r.error) throw r.error;
+    if(!signedIn() || S.account.uid!==uid) return false;
+    S._remoteAt = at; S._pushed = Math.max(S._pushed||0, stamp); persist(); _retry = 0; setSync("saved");
+    if(_again || (S._mod||0) > S._pushed){ _again = false; syncSoon(); }
+    return true;
+  }catch(e){ syncFail(e); return false; }
+  finally{ _syncing = false; }
+}
+/* merge two copies of the progress; locWins decides conflicts on the same item, everything else is kept (nothing is dropped) */
+function mergeState(loc, rem, locWins, d){
+  if(!isObj(loc) || !isObj(rem) || d<=0) return locWins ? (loc!==undefined ? loc : rem) : (rem!==undefined ? rem : loc);
+  const o = {}; new Set(Object.keys(rem).concat(Object.keys(loc))).forEach(k=>{ o[k] = mergeState(loc[k], rem[k], locWins, d-1); }); return o;
+}
+function replaceState(next){ Object.keys(S).forEach(k=>delete S[k]); Object.assign(S, next); }
+function freshState(settings){ return {name:"",days:{},res:{},work:{},reflect:{},habits:{},tut:{},settings:settings||{replay:"allow",rate:0.95},last:null,started:new Date().toISOString()}; }
+const STASH = "stratsix.stash.";
+function stashLocal(){ try{ if(S.owner && syncDirty()) localStorage.setItem(STASH+S.owner, JSON.stringify(S)); }catch(e){} }
+function readStash(uid){ try{ const raw = localStorage.getItem(STASH+uid); return raw ? JSON.parse(raw) : null; }catch(e){ return null; } }
+function clearStash(uid){ try{ localStorage.removeItem(STASH+uid); }catch(e){} }
+/* clear everything that belongs to the previous person: progress, drafts, results, recordings */
+function wipeLocal(){
+  clearTimeout(_syncT); clearTimeout(_retryT); _retry = 0; _again = false;
+  replaceState(freshState(S.settings));
+  try{ REC.clips = {}; REC.active = null; if(REC.stream){ REC.stream.getTracks().forEach(t=>t.stop()); REC.stream = null; } }catch(e){}
+  try{ RECDB.clear(); }catch(e){}
+  SYNC.restored = false; SYNC.state = "idle"; SYNC.err = "";
+  persist();
+}
+async function restoreProgress(){
+  if(!SB || !signedIn() || _restoring) return;
+  _restoring = true; clearTimeout(_retryT); setSync("saving");
+  const uid = S.account.uid;
+  try{
+    const r = await SB.from("progress").select("state,updated_at").eq("user_id", uid).maybeSingle();
+    if(r && r.error) throw r.error;
+    if(!signedIn() || S.account.uid!==uid) return;
+    const d = r && r.data;
+    const hasLocal = Object.keys(S.days||{}).length || Object.keys(S.work||{}).length || Object.keys(S.res||{}).length || Object.keys(S.reflect||{}).length;
+    const dirty = syncDirty();                         /* legacy data with no sync record counts as unsaved */
+    let push = false, changed = false;
+    if(d && d.state){
+      if(!hasLocal){ const acc = S.account, own = S.owner; replaceState(Object.assign({}, freshState(S.settings), d.state, {account:acc, owner:own, _remoteAt:d.updated_at, _pushed:Date.now(), _mod:Date.now()})); toast("Your saved progress was restored."); changed = true; }
+      else if(d.updated_at !== S._remoteAt){           /* the account copy changed elsewhere: merge, keep both */
+        const acc = S.account, own = S.owner, m = mergeState(S, d.state, dirty, 4);
+        replaceState(Object.assign({}, freshState(S.settings), m, {account:acc, owner:own, _remoteAt:d.updated_at, _pushed:S._pushed||0, _mod:Date.now()}));
+        toast("Progress from another device was combined with this one."); push = true; changed = true;
+      } else push = dirty;
+    } else push = !!hasLocal || dirty;
+    SYNC.restored = true; _retry = 0; persist(); if(changed) render();
+    if(push) syncNow(); else setSync("saved");
+  }catch(e){ syncFail(e); }
+  finally{ _restoring = false; }
+}
+window.addEventListener("online", ()=>{ if(signedIn()){ _retry = 0; SYNC.restored ? syncNow() : restoreProgress(); } });
 async function adoptSession(session){
   const u = session && session.user; if(!u) return false;
+  /* data on this device belongs to one account: if a different person signs in, set the previous copy aside and start clean */
+  if(S.owner && S.owner!==u.id){ stashLocal(); wipeLocal(); delete S.account; }
+  const stash = readStash(u.id); if(stash && !S.owner){ const own = u.id; replaceState(Object.assign({}, stash)); S.owner = own; clearStash(u.id); }
+  S.owner = u.id; SYNC.restored = false;
   const meta = u.user_metadata || {}; const prev = S.account || {};
   const name = String(meta.full_name || meta.name || prev.name || S.name || "").replace(/\s+/g," ").trim();
   let role = "student";
@@ -7430,7 +7511,12 @@ function googleSignIn(){
   if(!SB){ toast("Sign-in is not available right now. Check your internet connection and reload the page."); return; }
   SB.auth.signInWithOAuth({provider:"google", options:{redirectTo: location.origin+location.pathname, queryParams:{prompt:"select_account"}}}).then(r=>{ if(r && r.error) toast(sbErr(r.error)); });
 }
-async function signOutGoogle(){ try{ if(SB) await SB.auth.signOut(); }catch(e){} if(S.account){ S.account = Object.assign({}, S.account, {uid:"", role:""}); } save(); render(); }
+async function signOutGoogle(){
+  try{ if(signedIn() && SYNC.restored && syncDirty()) await syncNow(); }catch(e){}
+  try{ if(SB) await SB.auth.signOut(); }catch(e){}
+  stashLocal(); wipeLocal(); delete S.account; persist();
+  render();
+}
 
 /* ---------------- helpers ---------------- */
 function h(tag, attrs, ...kids){
@@ -7983,6 +8069,7 @@ const REC = {
 const RECDB = {
   db: null,
   open(){ if(this.db) return Promise.resolve(this.db); return new Promise(res=>{ try{ const r = indexedDB.open("stratsix-rec",1); r.onupgradeneeded = ()=>{ r.result.createObjectStore("clips",{keyPath:"id"}); }; r.onsuccess = ()=>{ this.db = r.result; res(this.db); }; r.onerror = ()=>res(null); }catch(e){ res(null); } }); },
+  async clear(){ const db = await this.open(); if(!db) return; try{ db.transaction("clips","readwrite").objectStore("clips").clear(); }catch(e){} },
   async put(c){ const db = await this.open(); if(!db) return; try{ const o = Object.assign({}, c); delete o.url; db.transaction("clips","readwrite").objectStore("clips").put(o); }catch(e){} },
   async get(id){ const db = await this.open(); if(!db) return null; return new Promise(res=>{ try{ const q = db.transaction("clips").objectStore("clips").get(id); q.onsuccess = ()=>res(q.result||null); q.onerror = ()=>res(null); }catch(e){ res(null); } }); }
 };
@@ -8604,7 +8691,7 @@ function viewHome(){
       signedIn() ? h("div",{class:"row"}, h("span",{class:"pill ok"},"Signed in with Google"), h("button",{class:"btn ghost sm",type:"button",onclick:signOutGoogle},"Sign out")) : null,
       h("div",{class:"kv"}, "Started", h("b",null, new Date(S.started).toLocaleDateString())),
       h("div",{class:"kv"}, "Days completed", h("b",null, SECS.reduce((a,s)=>a+secStats(s).done,0)+" / "+(SECS.length*17))),
-      h("div",{class:"kv"}, "Progress saved", h("b",null, signedIn()? "to your account" : "on this device")),
+      h("div",{class:"kv"}, "Progress saved", h("b",{id:"sync-status"}, syncLabel())),
       h("button",{class:"btn sm",onclick:()=>go({name:"progress"})},"Share a report or back up"))
   );
   const cards = h("div",{class:"sections"}, ...SECS.map(sec=>{
@@ -10336,7 +10423,7 @@ if(SB){
   SB.auth.onAuthStateChange((ev, ses)=>{ if(ev==="SIGNED_IN" && ses && !signedIn()){ setTimeout(()=>{ adoptSession(ses).then(()=>{ render(); refreshAccess(); }); }, 0); } });
 }
 refreshAccess();
-window.__BS_TEST = {buildCW, ssPost, ssGet, signedIn, syncNow, loadStudents, go};
+window.__BS_TEST = {buildCW, ssPost, ssGet, signedIn, syncNow, loadStudents, go, adoptSession, signOutGoogle, restoreProgress, syncLabel, syncDirty, S:()=>S, SYNC, timers:{clear(){ clearTimeout(_syncT); clearTimeout(_retryT); }}, save};
 })();
 
 </script>
