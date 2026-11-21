@@ -1,4 +1,4 @@
-<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style><meta name="theme-color" content="#0B3B3A">
+<!doctype html><html lang="en"><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style><meta name="theme-color" content="#0B3B3A">
 <title>StratSix – iBT</title>
 <meta name="description" content="Independent TOEFL iBT® test (2026 format) preparation for B2–C1 students: 85 days in five modules: Reading, Listening, Writing I, Writing II and Speaking, plus a full-length Test Simulator.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -8637,9 +8637,9 @@ function viewRegister(){
     h("div",{class:"row"}, h("button",{class:"btn primary",type:"button",id:"rg-google",onclick:googleSignIn},"Continue with Google")),
     h("div",{class:"small muted"}, "By continuing you agree to the ", h("a",{href:"privacy.html",target:"_blank",rel:"noopener"},"Privacy Policy"), ". StratSix stores your name, email, progress, recordings and writing so your teacher can review them and give you feedback."),
     h("div",{class:"small muted"}, "Your progress is saved to your account automatically, so you can sign in on any device."));
-  const code = h("textarea",{class:"textarea",style:"min-height:80px",id:"rg-restore",placeholder:"Paste your backup code here"});
+  const code = h("textarea",{class:"textarea",style:"min-height:80px",id:"rg-restore","aria-label":"Backup code",placeholder:"Paste your backup code here"});
   const restore = h("details",{class:"panel"}, h("summary",{class:"q",style:"cursor:pointer"},"I already have an account on another device"), h("div",{class:"stack",style:"margin-top:10px"}, h("p",{class:"small muted"},"On your other device, open the Dashboard → Share a report, back up… → Copy backup code, then paste it here."), code, h("div",{class:"row"}, h("button",{class:"btn",type:"button",onclick:()=>{ try{ const t = code.value.trim(); const o = JSON.parse(t.startsWith("{")? t : decodeURIComponent(escape(atob(t)))); if(!o.days) throw 0; S = Object.assign(S,o); save(); toast("Account restored."); go({name:"home"}); }catch(e){ toast("That is not a StratSix backup code. Copy the whole code and try again."); } }},"Restore my account"))));
-  const pin = h("input",{class:"input",type:"password",id:"rg-pin",placeholder:"Teacher PIN",style:"max-width:180px"});
+  const pin = h("input",{class:"input",type:"password",id:"rg-pin","aria-label":"Teacher PIN",placeholder:"Teacher PIN",style:"max-width:180px"});
   const teacher = h("details",{class:"small"}, h("summary",{style:"cursor:pointer"},"I am the teacher"), h("div",{class:"row",style:"margin-top:8px"}, pin, h("button",{class:"btn sm",type:"button",onclick:()=>{ if(pin.value.trim()===TEACHER_PIN){ S.teacher = true; save(); go({name:"teacher"}); } else toast("That PIN is not correct."); }},"Enter as teacher")));
   return h("main",{class:"page",style:"max-width:720px"}, h("div",{class:"hero-main",style:"margin-bottom:16px"}, h("div",{class:"eyebrow"},"TOEFL iBT® test prep · 2026 format · B2–C1"), h("h1",null,"Sign in to StratSix"), h("p",null,"Sign in with your Google account. Your teacher can then see your work and give you feedback.")), h("div",{class:"panel stack"}, form), h("div",{style:"margin-top:12px"}, restore), h("div",{style:"margin-top:12px"}, teacher));
 }
@@ -8942,7 +8942,7 @@ function voiceTip(){
 function settingRow(label, key, opts){ const sel = h("select",{class:"input",id:"set-"+key,style:"max-width:260px"}, ...opts.map(([v,l])=>h("option",{value:String(v),selected: String(S.settings[key])===String(v)?true:null}, l))); sel.addEventListener("change",()=>{ S.settings[key] = key==="rate"? +sel.value : sel.value; save(); toast(label+" updated."); }); return h("div",{class:"row"}, h("label",{for:"set-"+key,style:"min-width:140px;font-weight:600"},label), sel); }
 
 function teacherPanel(){
-  const pin = h("input",{class:"input",type:"password",id:"t-pin",placeholder:"Teacher PIN",style:"max-width:200px",autocomplete:"off"});
+  const pin = h("input",{class:"input",type:"password",id:"t-pin","aria-label":"Teacher PIN",placeholder:"Teacher PIN",style:"max-width:200px",autocomplete:"off"});
   const on = h("button",{class:"btn primary",onclick:()=>{ if(pin.value.trim()===TEACHER_PIN){ S.teacher=true; persist(); toast("Preview mode on. All days are open on this device."); render(); } else toast("That PIN is not correct."); }},"Open all days");
   const off = h("button",{class:"btn",onclick:()=>{ S.teacher=false; persist(); toast("Preview mode off. Days lock again."); render(); }},"Turn preview mode off");
   return h("div",{class:"panel stack",style:"margin-top:16px"}, h("h2",null,"Preview mode"), h("p",{class:"muted small"},"Students unlock each day by completing every activity of the previous day. To review or teach any day yourself, turn on preview mode on your own device."), S.teacher? h("div",{class:"row"}, h("span",{class:"pill ok"},"Preview mode is on"), off) : h("div",{class:"row"}, pin, on));
@@ -10433,6 +10433,14 @@ if(SB){
   SB.auth.onAuthStateChange((ev, ses)=>{ if(ev==="SIGNED_IN" && ses && !signedIn()){ setTimeout(()=>{ adoptSession(ses).then(()=>{ render(); refreshAccess(); }); }, 0); } });
 }
 refreshAccess();
+/* Accessibility: every field gets an accessible name (from its label, placeholder or nearest prompt), also in content built later */
+function a11yLabel(root){
+  try{ (root||document).querySelectorAll("input:not([type=hidden]):not([type=checkbox]):not([type=radio]), textarea, select").forEach(el=>{
+    if(el.getAttribute("aria-label") || el.getAttribute("aria-labelledby") || (el.labels && el.labels.length)) return;
+    const t = el.getAttribute("placeholder") || el.getAttribute("title") || (el.closest(".cw") ? "Missing letters" : "") || "Answer"; el.setAttribute("aria-label", t);
+  }); }catch(e){}
+}
+try{ new MutationObserver(()=>{ clearTimeout(a11yLabel._t); a11yLabel._t = setTimeout(()=>a11yLabel(),150); }).observe(document.body,{childList:true,subtree:true}); }catch(e){}
 window.__BS_TEST = {blkKey, buildCW, ssPost, ssGet, signedIn, syncNow, loadStudents, go, adoptSession, signOutGoogle, restoreProgress, syncLabel, syncDirty, S:()=>S, SYNC, timers:{clear(){ clearTimeout(_syncT); clearTimeout(_retryT); }}, save};
 })();
 
