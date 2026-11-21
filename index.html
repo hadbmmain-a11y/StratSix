@@ -8538,7 +8538,33 @@ function rubricTable(id){
 /* ---------------- views ---------------- */
 let VIEW = {name:"home"};
 const root = document.getElementById("app");
-function go(v){ clearTimers(); onSaveHook = null; if(v && v.name==="tutorials") v = {name:"guides",part:"tutorials"}; if(v && v.name==="rubrics") v = {name:"guides",part:"rubrics",tab:v.tab}; if(v && v.name==="progress") v = {name:"home", anchor:"share"}; if(v && v.name==="feedback") v = {name:"home", anchor:"feedback"}; VIEW = v; if(v.sec){ S.last = {sec:v.sec, day:v.day}; save(); } render(); const el = v.anchor && document.getElementById(v.anchor); if(el){ if(el.tagName==="DETAILS") el.open = true; el.scrollIntoView(); } else window.scrollTo(0,0); }
+/* Addresses: every module, day and guide has its own URL (#reading/4), and the Back button and reload keep your place. */
+function viewHash(v){
+  if(!v) return "";
+  switch(v.name){
+    case "home": return "";
+    case "sec": return v.sec+"/"+(v.day||1);
+    case "guides": return "guides"+(v.part?"/"+v.part:"");
+    case "teacher": return "teacher";
+    case "sim": case "simrun": case "simreport": return "sim";
+    default: return null;               /* other screens keep the current address */
+  }
+}
+function parseHash(){
+  const parts = (location.hash||"").slice(1).split("/"), tok = parts[0];
+  if(SECS.includes(tok)){ const n = parseInt(parts[1],10); return {name:"sec", sec:tok, day:(n>=1 && n<=17) ? n : lastDay(tok)}; }
+  if(tok==="rubrics"||tok==="tutorials") return {name:"guides", part:tok};
+  if(tok==="guides") return {name:"guides", part:parts[1]||undefined};
+  if(tok==="teacher"||tok==="sim") return {name:tok};
+  return {name:"home"};
+}
+function syncHash(replace){
+  try{ const hh = viewHash(VIEW); if(hh===null) return; const cur = (location.hash||"").slice(1); if(hh===cur) return;
+    const url = location.pathname + location.search + (hh? "#"+hh : ""); history[replace?"replaceState":"pushState"](null,"",url); }catch(e){}
+}
+window.addEventListener("popstate", ()=>{ clearTimers(); onSaveHook = null; VIEW = parseHash(); render(); window.scrollTo(0,0); syncHash(true); });
+
+function go(v){ clearTimers(); onSaveHook = null; if(v && v.name==="tutorials") v = {name:"guides",part:"tutorials"}; if(v && v.name==="rubrics") v = {name:"guides",part:"rubrics",tab:v.tab}; if(v && v.name==="progress") v = {name:"home", anchor:"share"}; if(v && v.name==="feedback") v = {name:"home", anchor:"feedback"}; VIEW = v; if(v.sec){ S.last = {sec:v.sec, day:v.day}; save(); } render(); const el = v.anchor && document.getElementById(v.anchor); if(el){ if(el.tagName==="DETAILS") el.open = true; el.scrollIntoView(); } else window.scrollTo(0,0); syncHash(); }
 
 /* ---------------- Teacher: Students tab ---------------- */
 const STU = {rows:null, sel:null, err:"", loading:false};
@@ -8764,7 +8790,7 @@ function viewSection(){
   const sec = VIEW.sec; const s = BS.sections[sec];
   if(!modOpen(sec)) return lockedSection(sec);
   let day = s.days.find(d=>d.n===VIEW.day) || s.days[0];
-  if(!isUnlocked(sec, day.n)) day = s.days.find(d=>d.n===lastDay(sec)) || s.days[0];
+  if(!isUnlocked(sec, day.n)) day = s.days.find(d=>d.n===lastDay(sec)) || s.days[0]; VIEW.day = day.n;
   const dayBtns = {};
   const track = trackFor(sec, day.n, false, dayBtns);
   const sel = trackSelect(sec, day.n, false);
@@ -10425,9 +10451,9 @@ function __speakingPatch(){ const P = {"7":{"blocks":{"2.0":{"html":"<p>Press st
 __speakingPatch();
 /*SPEAKING_PATCH_END*/
 
-const tok = (location.hash||"").slice(1);
-if(SECS.includes(tok)) VIEW = {name:"sec",sec:tok,day:lastDay(tok)}; else if(tok==="rubrics"||tok==="tutorials") VIEW={name:"guides",part:tok}; else if(["teacher","sim"].includes(tok)) VIEW={name:tok};
+VIEW = parseHash();
 render();
+syncHash(true);
 if(SB){
   SB.auth.getSession().then(r=>{ const ses = r && r.data && r.data.session; if(ses){ return adoptSession(ses).then(ok=>{ if(ok){ render(); refreshAccess(); } }); } else if(S.account && S.account.uid){ S.account = Object.assign({}, S.account, {uid:"", role:""}); save(); render(); } }).catch(()=>{});
   SB.auth.onAuthStateChange((ev, ses)=>{ if(ev==="SIGNED_IN" && ses && !signedIn()){ setTimeout(()=>{ adoptSession(ses).then(()=>{ render(); refreshAccess(); }); }, 0); } });
@@ -10441,7 +10467,7 @@ function a11yLabel(root){
   }); }catch(e){}
 }
 try{ new MutationObserver(()=>{ clearTimeout(a11yLabel._t); a11yLabel._t = setTimeout(()=>a11yLabel(),150); }).observe(document.body,{childList:true,subtree:true}); }catch(e){}
-window.__BS_TEST = {blkKey, buildCW, ssPost, ssGet, signedIn, syncNow, loadStudents, go, adoptSession, signOutGoogle, restoreProgress, syncLabel, syncDirty, S:()=>S, SYNC, timers:{clear(){ clearTimeout(_syncT); clearTimeout(_retryT); }}, save};
+window.__BS_TEST = {viewHash, parseHash, blkKey, buildCW, ssPost, ssGet, signedIn, syncNow, loadStudents, go, adoptSession, signOutGoogle, restoreProgress, syncLabel, syncDirty, S:()=>S, SYNC, timers:{clear(){ clearTimeout(_syncT); clearTimeout(_retryT); }}, save};
 })();
 
 </script>
