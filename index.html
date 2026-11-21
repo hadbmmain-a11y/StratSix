@@ -8712,10 +8712,20 @@ function scap(s){ return s==="writing"? "Writing" : cap(s); }
 
 const REQ_LABEL = {hardset:"Extra Hard Set (90% to pass)", tutorial:"watch the tutorial to the end", etsself:"test-style self-score (11 responses)", dictation:"dictation", mcq:"questions", cw:"Complete the Words", listen:"listening questions", response:"Choose a Response", bas:"Build a Sentence", write:"writing task and self-review", repeat:"Listen and Repeat self-marks", interview:"interview self-score", typing:"typing test", analyzer:"fluency check", reflect:"reflection", mock:"mock test (both modules)"};
 function rubricDone(r,id){ return !!r && BS.rubrics[id].criteria.every(c=>r[c.id]!=null); }
+/* Stable activity keys: a block is saved under day + stage id + block position inside its stage.
+   The stage id comes from the stage's own kind and title (never from its position in the day), so inserting a new stage
+   does not move anyone's saved work. If a stage title is edited, set st.sid to the old id to keep saved work attached. */
+function blkKey(day, dk, si, bi){
+  if(!day.__sids || day.__sids.length!==day.stages.length){
+    const seen = {}; day.__sids = day.stages.map(st=>{ const base = String(st.sid || ((st.kind||"x")+"."+(st.title||""))).toLowerCase().replace(/[^a-z0-9]+/g,"_").replace(/^_+|_+$/g,"").slice(0,48) || "stage"; seen[base] = (seen[base]||0)+1; return seen[base]>1 ? base+"~"+seen[base] : base; });
+  }
+  const st = day.stages[si], b = st.blocks[bi];
+  return dk+"-"+day.__sids[si]+"-"+((b && b.t==="tutorial" && b.id) ? b.id : bi);
+}
 function dayReqs(sec, day){
   const dk = dayKey(sec, day.n); const out = [];
   day.stages.forEach((st,si)=>st.blocks.forEach((b,bi)=>{
-    const key = dk+"-"+si+"-"+bi; const w = S.work[key]||{}; let ok = null;
+    const key = blkKey(day,dk,si,bi); const w = S.work[key]||{}; let ok = null;
     switch(b.t){
       case "mcq": case "cw": case "listen": case "response": case "bas": case "dictation": ok = !!S.res[key]; break;
       case "mock": ok = !!S.res[key+"-summary"]; break;
@@ -8732,7 +8742,7 @@ function dayReqs(sec, day){
     }
     if(ok!==null) out.push({label:(st.title||STAGE[st.kind])+": "+REQ_LABEL[b.t], ok, id:"blk-"+key, si});
   }));
-  const sc = []; day.stages.forEach((st,si)=>st.blocks.forEach((b,bi)=>{ if(ACC_TYPES.includes(b.t)){ const k = dk+"-"+si+"-"+bi; sc.push({k, r:S.res[k], label:(st.title||STAGE[st.kind])}); } }));
+  const sc = []; day.stages.forEach((st,si)=>st.blocks.forEach((b,bi)=>{ if(ACC_TYPES.includes(b.t)){ const k = blkKey(day,dk,si,bi); sc.push({k, r:S.res[k], label:(st.title||STAGE[st.kind])}); } }));
   if(sc.length){
     const all = sc.every(x=>x.r); const c = sc.reduce((a,x)=>a+(x.r?x.r.c:0),0), t = sc.reduce((a,x)=>a+(x.r?x.r.t:0),0); const a = t? c/t : 0;
     out.push({acc:true, label: all? "Day accuracy "+Math.round(a*100)+"% · you need "+Math.round(ACC_MIN*100)+"%" : "Day accuracy of "+Math.round(ACC_MIN*100)+"% or more", ok: all && a >= ACC_MIN - 1e-9, id:"blk-"+sc[0].k, low: all? sc.filter(x=>x.r.c/x.r.t < ACC_MIN) : []});
@@ -8760,7 +8770,7 @@ function viewSection(){
   const sel = trackSelect(sec, day.n, false);
   const dk = dayKey(sec,day.n);
   const head = h("div",{class:"sheet-head"}, h("div",{class:"row",style:"justify-content:space-between"}, h("span",{class:"eyebrow"}, s.title+" · Day "+day.n+" of 17"), (S.days[dk]||{}).done? h("span",{class:"pill ok"},"Completed") : null), h("h1",null, day.title), h("div",{class:"meta"}, h("span",{class:"pill"}, day.task), h("span",{class:"pill plain"}, "≈ "+durText(dayMinutes(day))+" of student work"), day.level? h("span",{class:"pill plain"}, day.level):null), h("p",{class:"objective",html:"<b>By the end of today:</b> "+day.objective}), day.live? h("div",{class:"live"}, h("span",{class:"pill red"},"Live class"), h("span",{html:day.live})) : null);
-  const stages = day.stages.map((st,si)=>h("section",{class:"stage"}, h("div",{class:"stage-head"}, h("span",{class:"stage-no"}, "STAGE "+(si+1)+" / "+day.stages.length), h("h3",null, st.title || STAGE[st.kind]), h("span",{class:"pill plain"}, STAGE[st.kind]||st.kind), st.mins? h("span",{class:"pill plain"}, st.mins+" min"):null), h("div",{class:"stage-body"}, ...st.blocks.map((b,bi)=>h("div",{class:"blk",id:"blk-"+dk+"-"+si+"-"+bi}, renderBlock(b, {key:dk+"-"+si+"-"+bi})))) ));
+  const stages = day.stages.map((st,si)=>h("section",{class:"stage"}, h("div",{class:"stage-head"}, h("span",{class:"stage-no"}, "STAGE "+(si+1)+" / "+day.stages.length), h("h3",null, st.title || STAGE[st.kind]), h("span",{class:"pill plain"}, STAGE[st.kind]||st.kind), st.mins? h("span",{class:"pill plain"}, st.mins+" min"):null), h("div",{class:"stage-body"}, ...st.blocks.map((b,bi)=>h("div",{class:"blk",id:"blk-"+blkKey(day,dk,si,bi)}, renderBlock(b, {key:blkKey(day,dk,si,bi)})))) ));
   const stageBodies = stages.map(sec=>sec.querySelector(".stage-body")); const lockEls = stages.map((sec,si)=>{ const l = h("div",{class:"why",hidden:true,html:"🔒 <b>Locked.</b> Finish the previous activity to open this one."}); stageBodies[si].before(l); return l; });
   const prev = s.days.find(d=>d.n===day.n-1), next = s.days.find(d=>d.n===day.n+1);
   const meter = h("i",{style:"width:0%"}); const count = h("span",{class:"mono small"});
@@ -10423,7 +10433,7 @@ if(SB){
   SB.auth.onAuthStateChange((ev, ses)=>{ if(ev==="SIGNED_IN" && ses && !signedIn()){ setTimeout(()=>{ adoptSession(ses).then(()=>{ render(); refreshAccess(); }); }, 0); } });
 }
 refreshAccess();
-window.__BS_TEST = {buildCW, ssPost, ssGet, signedIn, syncNow, loadStudents, go, adoptSession, signOutGoogle, restoreProgress, syncLabel, syncDirty, S:()=>S, SYNC, timers:{clear(){ clearTimeout(_syncT); clearTimeout(_retryT); }}, save};
+window.__BS_TEST = {blkKey, buildCW, ssPost, ssGet, signedIn, syncNow, loadStudents, go, adoptSession, signOutGoogle, restoreProgress, syncLabel, syncDirty, S:()=>S, SYNC, timers:{clear(){ clearTimeout(_syncT); clearTimeout(_retryT); }}, save};
 })();
 
 </script>
