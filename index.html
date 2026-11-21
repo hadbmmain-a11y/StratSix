@@ -9886,10 +9886,10 @@ __writingPatch();
   /* Daily homework: critical-thinking answers written inside the platform. Required to finish the day. */
   const REQ_NOTE = "";
   R.think = (b, ctx) => {
-    const key = ctx.key; const parts = key.split("-"); const wr = parts[0]==="writing2"? "Writing II" : "Writing I";
+    const key = ctx.key; const parts = key.split("-"); const wr = parts[0]==="writing2"? "Writing II" : "Writing I"; const taskName = b.task||"Homework";
     const ans = ((S.work[key]||{}).ans||[]).slice();
     const box = h("div",{class:"stack"}); const msg = h("div",{class:"small muted"});
-    const btn = h("button",{class:"btn primary",type:"button",disabled:true},"Submit homework");
+    const btn = h("button",{class:"btn primary",type:"button",disabled:true},b.btn||"Submit homework");
     const chk = h("div",{class:"small"});
     const tas = b.prompts.map((p,i)=>{
       const ta = h("textarea",{rows:6,style:"width:100%",placeholder:"Write your answer here…"}); ta.value = ans[i]||"";
@@ -9910,18 +9910,18 @@ __writingPatch();
     btn.addEventListener("click", async ()=>{
       const a = tas.map(t=>t.value); const prev = S.work[key]||{};
       S.work[key] = Object.assign(prev, {ans:a, hwDone:true, hwAt:new Date().toISOString()}); save();
-      btn.textContent = "Saved ✓"; msg.textContent = "Homework saved. Sending it for AI feedback…";
+      btn.textContent = "Saved ✓"; msg.textContent = "Saved. Sending it to your teacher…";
       try{
-        await ssPost({action:"writing", section:"Writing", day:parts[1], task:"Homework", prompt:"["+wr+" · Day "+parts[1]+" · Homework] "+b.prompts.map(p=>p.q.replace(/<[^>]+>/g,"")).join(" | "), text:a.map((x,i)=>"Q"+(i+1)+": "+x).join("\n\n"), words:words(a.join(" "))});
-        logSub({kind:"writing", key, day:parts[1], task:"Homework"});
-        msg.textContent = "Sent ✓ Your homework is submitted. AI feedback appears in Your feedback on the Dashboard after the next scoring run.";
-      }catch(e){ msg.textContent = "Homework saved on this device. It could not be sent now ("+e.message+"); press Submit homework again later."; }
+        await ssPost({action:"writing", section:"Writing", day:parts[1], task:taskName, prompt:"["+wr+" · Day "+parts[1]+" · "+taskName+"] "+b.prompts.map(p=>p.q.replace(/<[^>]+>/g,"")).join(" | "), text:a.map((x,i)=>"Q"+(i+1)+": "+x).join("\n\n"), words:words(a.join(" "))});
+        logSub({kind:"writing", key, day:parts[1], task:taskName});
+        msg.textContent = "Sent ✓ Your answers are submitted and your teacher can read them.";
+      }catch(e){ msg.textContent = "Saved on this device. It could not be sent now ("+e.message+"); press the button again later."; }
     });
-    const wrap = h("div",{class:"stack"}, h("div",{class:"why",html:"<b>Required.</b> Answer every question in your own words. The next day opens when you submit. Think before you write: there is no single correct answer, but you must give reasons."}), box, chk, h("div",{class:"row"}, btn), msg);
+    const wrap = h("div",{class:"stack"}, h("div",{class:"why",html:b.intro || "<b>Required.</b> Answer every question in your own words. The next day opens when you submit. Think before you write: there is no single correct answer, but you must give reasons."}), box, chk, h("div",{class:"row"}, btn), msg);
     if((S.work[key]||{}).hwDone) btn.textContent = "Submit again"; upd(true);
     return wrap;
   };
-  REQ_LABEL.think = "daily homework (submit your answers)";
+  REQ_LABEL.think = "written answers (submit)";
   /* ---------- Day 4: Embedded questions (pilot of the five-step grammar cycle) ---------- */
   const W = BS.sections.writing; const d4 = W.days.find(x=>x.n===4);
   const learn = d4.stages[0], bas10 = d4.stages[1], ext = d4.stages[3], email = d4.stages[4], stretch = d4.stages[5];
@@ -10047,10 +10047,18 @@ __writingPatch();
   ];
   d7.stages = [
     tut, learn,
+    {kind:"check", title:"Strategy questions: think and write", mins:7, blocks:[{t:"think", task:"Strategy questions", btn:"Submit my answers", intro:"<b>Required before the model.</b> Think about the strategy you just read. There is no single correct answer, but you must give reasons. Your teacher will read your answers.", prompts:[
+      {q:"The strategy says to open with a precise purpose, not “I want to ask something”. Why does a senior reader, such as a dean or an employer, care about this more than a friend would? Give two reasons.", min:40},
+      {q:"Compare “I need more time.” with “I would be grateful for a brief extension, if that is feasible.” What changes in meaning, tone and the likely reaction of the reader? Is anything lost in the longer version?", min:40},
+      {q:"Think of a situation where following this strategy exactly could make an email worse, for example too long or too stiff. What would you change, and why?", min:40}]}]},
     {kind:"learn", title:"Technique 1 · Purpose in sentence 1", mins:11, blocks:TECH(TECHS[1]).concat([{t:"mcq", tt:"X-Q", qs:T1drill}])},
     {kind:"learn", title:"Technique 2 · Cover every bullet", mins:11, blocks:TECH(TECHS[2]).concat([{t:"mcq", tt:"X-Q", qs:T2drill}])},
     {kind:"learn", title:"Technique 5 · Soften your requests", mins:12, blocks:TECH(TECHS[5]).concat([{t:"mcq", tt:"X-Q", qs:T5mcq},{t:"mcq", tt:"X-Q", qs:T5fte}])},
     model,
+    {kind:"check", title:"Model questions: think and write", mins:7, blocks:[{t:"think", task:"Model questions", btn:"Submit my answers", intro:"<b>Required before you write.</b> Look again at the model email to the dean. Answer in your own words and give reasons.", prompts:[
+      {q:"The writer gives the reason (final examinations finish on 20 June) before the request. Imagine the order reversed: request first, then reason. How might the dean react differently? Which order is better here, and why?", min:40},
+      {q:"The model offers a second option: “Should an extension prove impossible…”. What does this show the dean about the writer? Could this paragraph ever backfire? Explain.", min:40},
+      {q:"If you only had 80 words, which sentence in the model would you cut, and what is the risk of cutting it? Which sentence must stay?", min:40}]}]},
     {kind:"apply", title:"Your turn: use all three techniques", mins:20, blocks:[{t:"habit", items:["My first sentence states the purpose (Technique 1).","Each bullet has its own sentence, in order (Technique 2).","I used at least two softening expressions (Technique 5)."]}].concat(turn.blocks)},
     {kind:"apply", title:"Second email: apply the techniques again", mins:20, blocks:[ext.blocks[0]]},
     {kind:"habit", title:"Daily homework: think and write", mins:12, blocks:[{t:"think", prompts:[
