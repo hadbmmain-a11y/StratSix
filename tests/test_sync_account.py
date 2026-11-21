@@ -1,3 +1,4 @@
+import os
 import asyncio, json
 from playwright.async_api import async_playwright
 FAKE = r"""
@@ -27,7 +28,7 @@ async def main():
         ctx=await br.new_context(); await ctx.route("**/*",lambda r: r.continue_() if r.request.url.startswith("file:") else r.abort())
         page=await ctx.new_page(); errs=[]; page.on("pageerror",lambda e: errs.append(str(e)))
         await ctx.add_init_script(FAKE)
-        await page.goto("file:///home/claude/stratsix/index.html"); await page.wait_for_timeout(500)
+        await page.goto("file://"+os.path.join(os.path.dirname(os.path.abspath(__file__)),"..","index.html")); await page.wait_for_timeout(500)
         async def signin(u):
             await page.evaluate("(s)=>{window.__sess=s}",SES(u))
             await page.evaluate("(s)=>__BS_TEST.adoptSession(s)",SES(u)); await page.wait_for_timeout(700)
