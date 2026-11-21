@@ -158,6 +158,22 @@ button{font:inherit;color:inherit}
 .meter > i{display:block;height:100%;background:var(--accent);border-radius:99px}
 .meter.red > i{background:var(--red)}
 .kv{display:flex;justify-content:space-between;gap:8px;font-size:.85rem;color:var(--muted)}
+/* M3: dashboard, module cards, nav */
+.sections{grid-template-columns:repeat(5,minmax(0,1fr))}
+@media (max-width:1100px){.sections{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.sec-card{border-top:4px solid var(--mc,var(--accent))}
+.sec-card .code{color:var(--mc,var(--accent))}
+.sec-card .meter>i{background:var(--mc,var(--accent))}
+.sec-card[data-sec=reading]{--mc:#2563EB}.sec-card[data-sec=listening]{--mc:#9333EA}.sec-card[data-sec=writing]{--mc:#16A34A}.sec-card[data-sec=writing2]{--mc:#0D9488}.sec-card[data-sec=speaking]{--mc:#EA580C}
+.sec-card .next{font-size:.8rem;font-weight:600;color:var(--mc,var(--accent))}
+.sec-card.shut{opacity:.78}
+.cont{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.28);border-radius:12px;padding:12px 14px;margin-top:14px;max-width:470px}
+.cont .line{font-weight:700;color:#fff}.cont .sub{font-size:.85rem;color:rgba(255,255,255,.85);margin-top:2px}
+.cont .meter{background:rgba(255,255,255,.22);margin-top:8px}.cont .meter>i{background:#F2C14E}
+.nav{-webkit-mask-image:linear-gradient(90deg,transparent 0,#000 14px,#000 calc(100% - 22px),transparent 100%);mask-image:linear-gradient(90deg,transparent 0,#000 14px,#000 calc(100% - 22px),transparent 100%);padding:0 14px}
+@media (max-width:720px){.summit .route{opacity:.4}}
+@media (max-width:1250px){.bar-in{gap:10px}.nav button{padding:8px 9px;font-size:.88rem}.brand-name span{display:none}}
+.audio-panel .mic-out{min-height:1.4em}
 .sync-bad{color:#B42318!important}
 .kv b{color:var(--ink);font-family:var(--f-mono);font-weight:500}
 
@@ -8627,7 +8643,8 @@ function navBar(){
   const cur = VIEW.sec || ((VIEW.name==="tutorial")? "guides" : (VIEW.name==="simrun"||VIEW.name==="simreport")? "sim" : VIEW.name);
   return h("header",{class:"bar"}, h("div",{class:"bar-in"},
     h("button",{class:"brand",onclick:()=>go({name:"home"}),"aria-label":"StratSix dashboard"}, brandMark(), h("span",{class:"brand-name"},"StratSix", h("span",null,"· iBT"))),
-    h("nav",{class:"nav","aria-label":"Main"}, ...items.map(([k,l])=>h("button",{"aria-current":cur===k?"page":null,onclick:()=> SECS.includes(k)? go({name:"sec",sec:k,day:lastDay(k)}) : go({name:k})}, l)))
+    (()=>{ const nav = h("nav",{class:"nav","aria-label":"Main"}, ...items.map(([k,l])=>h("button",{"aria-current":cur===k?"page":null,onclick:()=> SECS.includes(k)? go({name:"sec",sec:k,day:lastDay(k)}) : go({name:k})}, l)));
+      setTimeout(()=>{ const c = nav.querySelector("[aria-current=page]"); if(c) nav.scrollLeft = Math.max(0, c.offsetLeft - nav.clientWidth/2 + c.offsetWidth/2); },0); return nav; })()
   ));
 }
 function lastDay(sec){ if(S.last && S.last.sec===sec && isUnlocked(sec,S.last.day)) return S.last.day; for(let n=1;n<=17;n++) if(!(S.days[dayKey(sec,n)]||{}).done) return isUnlocked(sec,n)? n : Math.max(1,n-1); return 17; }
@@ -8662,9 +8679,9 @@ function viewRegister(){
     legacy,
     h("div",{class:"row"}, h("button",{class:"btn primary",type:"button",id:"rg-google",onclick:googleSignIn},"Continue with Google")),
     h("div",{class:"small muted"}, "By continuing you agree to the ", h("a",{href:"privacy.html",target:"_blank",rel:"noopener"},"Privacy Policy"), ". StratSix stores your name, email, progress, recordings and writing so your teacher can review them and give you feedback."),
-    h("div",{class:"small muted"}, "Your progress is saved to your account automatically, so you can sign in on any device."));
+    h("div",{class:"small muted"}, "Use the same Google account on every device. Your progress follows your account, so you never need a code."));
   const code = h("textarea",{class:"textarea",style:"min-height:80px",id:"rg-restore","aria-label":"Backup code",placeholder:"Paste your backup code here"});
-  const restore = h("details",{class:"panel"}, h("summary",{class:"q",style:"cursor:pointer"},"I already have an account on another device"), h("div",{class:"stack",style:"margin-top:10px"}, h("p",{class:"small muted"},"On your other device, open the Dashboard → Share a report, back up… → Copy backup code, then paste it here."), code, h("div",{class:"row"}, h("button",{class:"btn",type:"button",onclick:()=>{ try{ const t = code.value.trim(); const o = JSON.parse(t.startsWith("{")? t : decodeURIComponent(escape(atob(t)))); if(!o.days) throw 0; S = Object.assign(S,o); save(); toast("Account restored."); go({name:"home"}); }catch(e){ toast("That is not a StratSix backup code. Copy the whole code and try again."); } }},"Restore my account"))));
+  const restore = h("details",{class:"panel"}, h("summary",{class:"q",style:"cursor:pointer"},"I used StratSix before Google sign-in (recover a backup)"), h("div",{class:"stack",style:"margin-top:10px"}, h("p",{class:"small muted"},"On your other device, open the Dashboard → Share a report, back up… → Copy backup code, then paste it here."), code, h("div",{class:"row"}, h("button",{class:"btn",type:"button",onclick:()=>{ try{ const t = code.value.trim(); const o = JSON.parse(t.startsWith("{")? t : decodeURIComponent(escape(atob(t)))); if(!o.days) throw 0; S = Object.assign(S,o); save(); toast("Account restored."); go({name:"home"}); }catch(e){ toast("That is not a StratSix backup code. Copy the whole code and try again."); } }},"Restore my account"))));
   return h("main",{class:"page",style:"max-width:720px"}, h("div",{class:"hero-main",style:"margin-bottom:16px"}, h("div",{class:"eyebrow"},"TOEFL iBT® test prep · 2026 format · B2–C1"), h("h1",null,"Sign in to StratSix"), h("p",null,"Sign in with your Google account. Your teacher can then see your work and give you feedback.")), h("div",{class:"panel stack"}, form), h("div",{style:"margin-top:12px"}, restore));
 }
 function editProfile(){
@@ -8697,18 +8714,43 @@ function routeSVG(sec){
     '<text x="'+(top[0]-46)+'" y="'+(top[1]-40)+'" fill="#EAF6F2" font-family="Fraunces, Georgia, serif" font-size="15">Band 6</text></svg>';
   const box = h("div",{class:"route"}); box.innerHTML = svg; return box;
 }
+async function micTest(out){
+  out.textContent = "Asking for your microphone…";
+  try{
+    const st = await REC.mic(); const AC = window.AudioContext || window.webkitAudioContext; const ctx = new AC(); const src = ctx.createMediaStreamSource(st); const an = ctx.createAnalyser(); an.fftSize = 512; src.connect(an);
+    const buf = new Uint8Array(an.fftSize); let peak = 0; const t0 = Date.now(); out.textContent = "Say a sentence for 3 seconds…";
+    await new Promise(res=>{ const iv = setInterval(()=>{ an.getByteTimeDomainData(buf); for(const v of buf) peak = Math.max(peak, Math.abs(v-128)); if(Date.now()-t0>3000){ clearInterval(iv); res(); } }, 80); });
+    try{ ctx.close(); }catch(e){}
+    out.textContent = peak>12 ? "Your microphone works. The sound level is good." : "We could not hear you. Check that the right microphone is chosen and that it is not muted, then test again.";
+  }catch(e){ out.textContent = "The microphone is blocked or missing. Allow it in your browser settings for this site, then test again."; }
+}
+function audioPanel(){
+  const out = h("div",{class:"small mic-out",role:"status","aria-live":"polite"});
+  return h("div",{class:"panel stack audio-panel",style:"margin-top:16px"}, h("div",{class:"eyebrow"},"Audio and microphone"), h("h2",null,"Check your sound before Listening and Speaking"),
+    h("p",{class:"muted small"},"Do this once on each device. Use headphones in a quiet place."),
+    settingRow("Replay audio", "replay", [["allow","Allowed (practice)"],["once","Once only (test mode)"]]),
+    settingRow("Speech speed", "rate", [[0.85,"Slower"],[0.95,"Normal"],[1.05,"Test speed"]]),
+    voiceRow("Woman’s voice","voiceW","W"), voiceRow("Man’s voice","voiceM","M"), voiceTip(),
+    h("div",{class:"row"}, h("button",{class:"btn sm",type:"button",onclick:()=>{ TTS.speak(["W: This is the woman's voice.","M: And this is the man's voice."]); }},"Test the voices"), h("button",{class:"btn sm primary",type:"button",onclick:()=>micTest(out)},"Test my microphone")), out);
+}
 function viewHome(){
-  const next = S.last || {sec:"reading",day:1};
+  let next = S.last || {sec:"reading",day:1};
+  if((S.days[dayKey(next.sec,next.day)]||{}).done){ let d = 17; for(let n=1;n<=17;n++){ if(!(S.days[dayKey(next.sec,n)]||{}).done){ d = isUnlocked(next.sec,n)? n : Math.max(1,n-1); break; } } next = {sec:next.sec, day:d}; }
   const nameIn = h("input",{class:"input",id:"student-name",placeholder:"Your full name",value:S.name||""});
   nameIn.addEventListener("input",()=>{ S.name=nameIn.value; save(); hello.textContent = S.name? "Welcome back, "+S.name.split(" ")[0]+"." : "Welcome to StratSix."; });
   const hello = h("h1",null, S.name? "Welcome back, "+S.name.split(" ")[0]+"." : "Welcome to StratSix.");
   void nameIn;
   const nd = BS.sections[next.sec].days.find(d=>d.n===next.day) || BS.sections[next.sec].days[0];
+  const cont = (()=>{ let reqs = []; try{ reqs = dayReqs(next.sec, nd).filter(r=>!r.acc); }catch(e){}
+    const done = reqs.filter(r=>r.ok).length, tot = reqs.length, nx = reqs.find(r=>!r.ok);
+    return h("div",{class:"cont"}, h("div",{class:"line"}, cap(next.sec)+" · Day "+nd.n+(tot? " · activity "+Math.min(tot,done+1)+" of "+tot : "")+" · about "+durText(dayMinutes(nd))),
+      h("div",{class:"sub"}, nx? "Next: "+nx.label : (tot? "Day complete. Well done." : (nd.t||""))),
+      tot? h("div",{class:"meter","aria-hidden":"true"}, h("i",{style:"width:"+Math.round(100*done/tot)+"%"})) : null); })();
   const hero = h("div",{class:"hero"},
     h("div",{class:"hero-main summit"}, routeSVG(next.sec),
       h("div",{class:"summit-in"},
         h("div",{class:"eyebrow"}, cap(next.sec)+" · Camp "+nd.n+" of 17"), hello,
-        h("p",null,"Each module is a 17-day climb to Band 6. Finish every activity of a day to reach the next camp, and bring your questions to class."),
+        h("p",null,"Each module is a 17-day climb to Band 6. Finish every activity of a day to reach the next camp, and bring your questions to class."), cont,
         h("div",{class:"row",style:"margin-top:18px"}, h("button",{class:"btn red",onclick:()=>go({name:"sec",sec:nd?next.sec:"reading",day:nd.n})}, "Continue the climb: "+cap(next.sec)+" · Day "+nd.n), h("button",{class:"btn outline",onclick:()=>go({name:"feedback"})},"Your feedback")),
         h("div",{class:"camps-legend small"}, h("span",null, h("i",{class:"lg done"}),"Done"), h("span",null, h("i",{class:"lg cur"}),"Today"), h("span",null, h("i",{class:"lg mock"}),"Mock test unlocks"), h("span",null,"Bands 1–6 in half bands · B2 ≈ 4–4.5 · C1 ≈ 5–5.5")))),
     h("div",{class:"panel stack namebox"}, h("div",{class:"eyebrow"},"My account"), h("div",null, h("b",{style:"font-size:1.1rem"}, (S.account&&S.account.name)||S.name||"Teacher preview"), h("div",{class:"small muted mono"}, (S.account&&S.account.email)||"")),
@@ -8719,15 +8761,17 @@ function viewHome(){
       h("button",{class:"btn sm",onclick:()=>go({name:"progress"})},"Share a report or back up"))
   );
   const cards = h("div",{class:"sections"}, ...SECS.map(sec=>{
-    const s = BS.sections[sec]; const st = secStats(sec);
-    return h("button",{class:"sec-card",onclick:()=>go({name:"sec",sec,day:lastDay(sec)})}, h("div",{class:"row",style:"justify-content:space-between"}, h("span",{class:"code"}, s.code), h("span",{class:"pill plain"}, s.time)), h("h3",null, s.title), h("div",{class:"small muted"}, s.blurb), h("div",{class:"meter"}, h("i",{style:"width:"+pct(st.done,st.total)+"%"})), h("div",{class:"kv"}, "Days", h("b",null, st.done+" / "+st.total)), h("div",{class:"kv"}, st.t? "Accuracy" : st.self!=null? "Self-score" : "Accuracy", h("b",null, st.t? pct(st.c,st.t)+"%" : st.self!=null? st.self.toFixed(1)+" / 5" : "–")));
+    const s = BS.sections[sec]; const st = secStats(sec); const ms = modState(sec); const open = modOpen(sec);
+    const nd2 = lastDay(sec); const finished = st.done>=st.total;
+    const state = finished ? "Finished" : open ? "Next: Day "+nd2 : (ms.st==="soon" ? "Opens "+fmtD(ms.from) : "Not open yet");
+    return h("button",{class:"sec-card"+(open?"":" shut"),"data-sec":sec,onclick:()=>go({name:"sec",sec,day:lastDay(sec)})}, h("div",{class:"row",style:"justify-content:space-between"}, h("span",{class:"code"}, s.code), h("span",{class:"pill plain"}, open? st.done+" / "+st.total+" days" : ST_LAB[ms.st]||"Closed")), h("h3",null, s.title), h("div",{class:"small muted"}, s.blurb), h("div",{class:"next"}, state), h("div",{class:"meter"}, h("i",{style:"width:"+pct(st.done,st.total)+"%"})), h("div",{class:"kv"}, st.t? "Accuracy" : st.self!=null? "Self-score" : "Accuracy", h("b",null, st.t? pct(st.c,st.t)+"%" : st.self!=null? st.self.toFixed(1)+" / 5" : "–")));
   }));
   const fmtT = h("div",{class:"panel stack"}, h("div",{class:"eyebrow"},"The test at a glance"), h("h2",null,"12 task types, about 90 minutes"), h("div",{class:"tbl-wrap"}, h("table",{class:"format-table"}, h("thead",null,h("tr",null,h("th",null,"Section"),h("th",null,"Task"),h("th",null,"What you do"))), h("tbody",null, ...BS.format.map(r=>h("tr",null, h("td",{class:"sec"},r[0]), h("td",null,r[1]), h("td",{class:"muted"},r[2])))))), h("div",{class:"small muted"},"Reading and Listening are adaptive: your Module 1 result decides whether Module 2 is harder or easier. Writing and Speaking are fixed."));
   const week = h("div",{class:"panel stack"}, h("div",{class:"eyebrow"},"How to use StratSix"), h("h2",null,"Your study routine"), h("ol",{class:"steps"}, ...BS.routine.map(r=>h("li",null,h("div",null,h("b",null,r[0]),h("span",null,r[1]))))));
   const P = progressPanels();
   const results = h("section",{id:"results",class:"stack",style:"margin-top:16px"}, h("div",{class:"eyebrow"},"Your results"), h("h2",null,"How you are doing"), P.accuracy);
-  const more = h("details",{id:"share",class:"panel",style:"margin-top:16px"}, h("summary",{class:"q",style:"cursor:pointer"},"Share a report, back up, and audio settings"), h("div",{class:"stack",style:"margin-top:12px"}, P.send, P.backup));
-  return h("main",{class:"page"}, hero, cards, feedbackBlock(), results, accessPanel(), h("div",{class:"two",style:"margin-top:16px"}, fmtT, week), more);
+  const more = h("details",{id:"share",class:"panel",style:"margin-top:16px"}, h("summary",{class:"q",style:"cursor:pointer"},"Share a report and back up"), h("div",{class:"stack",style:"margin-top:12px"}, P.send, P.backup));
+  return h("main",{class:"page"}, hero, cards, feedbackBlock(), audioPanel(), results, accessPanel(), h("div",{class:"two",style:"margin-top:16px"}, fmtT, week), more);
 }
 function dayMinutes(d){ const m = d.stages.reduce((a,s)=>a+(s.mins||0),0); return m || d.minutes || 60; }
 function durText(m){ const hh = Math.floor(m/60), mm = m%60; return hh? hh+" h"+(mm? " "+mm+" min":"") : mm+" min"; }
@@ -8942,14 +8986,7 @@ function progressPanels(){
   const code = h("textarea",{class:"textarea",style:"min-height:90px",placeholder:"Paste a backup code here to restore progress on this device.",id:"restore-code"});
   const backup = h("div",{class:"panel stack"}, h("div",{class:"eyebrow"},"Backup and settings"), h("h2",null,"Move to another device"), h("p",{class:"muted small"},"Your progress is saved to your account automatically when you are signed in with Google. If you need to move it by hand, copy your backup code and paste it into StratSix on your other device."),
     h("div",{class:"row"}, h("button",{class:"btn",onclick:()=>copyText(btoa(unescape(encodeURIComponent(JSON.stringify(S)))), null)},"Copy backup code"), h("button",{class:"btn",onclick:()=>offerDownload("StratSix-backup.json", JSON.stringify(S))},"Download backup")),
-    code, h("div",{class:"row"}, h("button",{class:"btn",onclick:()=>{ try{ const txt = code.value.trim(); const obj = JSON.parse(txt.startsWith("{")? txt : decodeURIComponent(escape(atob(txt)))); if(!obj.days) throw 0; S = Object.assign(S,obj); save(); toast("Progress restored."); render(); }catch(e){ toast("That code is not a StratSix backup. Copy it again and paste the whole code."); } }},"Restore progress")),
-    h("hr",{style:"border:0;border-top:1px solid var(--line);width:100%"}),
-    h("div",{class:"eyebrow"},"Audio settings"),
-    settingRow("Replay audio", "replay", [["allow","Allowed (practice)"],["once","Once only (test mode)"]]),
-    settingRow("Speech speed", "rate", [[0.85,"Slower"],[0.95,"Normal"],[1.05,"Test speed"]]),
-    voiceRow("Woman’s voice","voiceW","W"), voiceRow("Man’s voice","voiceM","M"),
-    voiceTip(),
-    h("button",{class:"btn sm",onclick:()=>{ TTS.speak(["W: This is the woman's voice.","M: And this is the man's voice."]); }},"Test the voices"));
+    code, h("div",{class:"row"}, h("button",{class:"btn",onclick:()=>{ try{ const txt = code.value.trim(); const obj = JSON.parse(txt.startsWith("{")? txt : decodeURIComponent(escape(atob(txt)))); if(!obj.days) throw 0; S = Object.assign(S,obj); save(); toast("Progress restored."); render(); }catch(e){ toast("That code is not a StratSix backup. Copy it again and paste the whole code."); } }},"Restore progress")));
   const accuracy = h("div",{class:"panel stack"}, h("div",{class:"eyebrow"},"Auto-scored tasks"), h("h2",null,"Accuracy by task type"), empty? h("p",{class:"muted"},"Nothing scored yet. Your results appear here after you check answers in any practice task.") : bars, h("p",{class:"small muted"},"Red bars are under 60%. Review the strategy day for that task before your next mock."));
   return {accuracy, send, backup};
 }
