@@ -10471,7 +10471,8 @@ function a11yLabel(root){
   }); }catch(e){}
 }
 try{ new MutationObserver(()=>{ clearTimeout(a11yLabel._t); a11yLabel._t = setTimeout(()=>a11yLabel(),150); }).observe(document.body,{childList:true,subtree:true}); }catch(e){}
-window.__BS_TEST = {dayOverride, isUnlocked, modOpen, modCalc, unlockCode, setACC:c=>{ ACC = Object.assign({}, ACC_DEFAULT, c); }, getACC:()=>ACC, viewHash, parseHash, blkKey, buildCW, ssPost, ssGet, signedIn, syncNow, loadStudents, go, adoptSession, signOutGoogle, restoreProgress, syncLabel, syncDirty, S:()=>S, SYNC, timers:{clear(){ clearTimeout(_syncT); clearTimeout(_retryT); }}, save};
+/* test hooks exist only when a test harness sets window.__BS_ENABLE_TEST before the page loads; nothing is exposed to students */
+if(window.__BS_ENABLE_TEST) window.__BS_TEST = {dayOverride, isUnlocked, modOpen, modCalc, unlockCode, setACC:c=>{ ACC = Object.assign({}, ACC_DEFAULT, c); }, getACC:()=>ACC, viewHash, parseHash, blkKey, buildCW, ssPost, ssGet, signedIn, syncNow, loadStudents, go, adoptSession, signOutGoogle, restoreProgress, syncLabel, syncDirty, S:()=>S, SYNC, timers:{clear(){ clearTimeout(_syncT); clearTimeout(_retryT); }}, save};
 })();
 
 </script>
