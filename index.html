@@ -1,6 +1,6 @@
 <!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style><meta name="theme-color" content="#0B3B3A">
 <title>StratSix – iBT</title>
-<meta name="description" content="Independent TOEFL iBT® test (2026 format) preparation for B2–C1 students: 68 day modules across Reading, Listening, Writing and Speaking, plus a full-length Test Simulator.">
+<meta name="description" content="Independent TOEFL iBT® test (2026 format) preparation for B2–C1 students: 85 days in five modules: Reading, Listening, Writing I, Writing II and Speaking, plus a full-length Test Simulator.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap">
@@ -571,7 +571,7 @@ audio{width:100%;max-width:420px}
 .day-btn.extra.done .day-num{background:var(--ok);border-color:var(--ok);color:#fff}
 .day-btn.extra .day-title{font-size:.88rem}
 </style>
-<script type="application/json" id="bs-access">{"reading":{"mode":"dates","s":"2026-10-05","e":"2026-10-27","r":9},"listening":{"mode":"closed","s":"","e":"","r":2},"writing":{"mode":"closed","s":"","e":"","r":0},"speaking":{"mode":"closed","s":"","e":"","r":0}}</script>
+<script type="application/json" id="bs-access">{"reading":{"mode":"dates","s":"2026-10-05","e":"2026-10-27","r":9},"listening":{"mode":"closed","s":"","e":"","r":2},"writing":{"mode":"closed","s":"","e":"","r":0},"writing2":{"mode":"closed","s":"","e":"","r":0},"speaking":{"mode":"closed","s":"","e":"","r":0}}</script>
 <div id="app"></div>
 <script>
 window.BS = {sections:{}};
@@ -7301,7 +7301,8 @@ ART.forEach(a=>{
 (function(){
 "use strict";
 const BS = window.BS;
-const SECS = ["reading","listening","writing","speaking"];
+const SECS = ["reading","listening","writing","writing2","speaking"];
+const SIMMODS = ["reading","listening","writing","speaking"];
 const TT = {
   "R-CW":"Complete the Words","R-DL":"Read in Daily Life","R-AP":"Read an Academic Passage",
   "L-CR":"Listen and Choose a Response","L-CONV":"Listen to a Conversation","L-ANN":"Listen to an Announcement","L-TALK":"Listen to an Academic Talk",
@@ -7827,10 +7828,11 @@ R.write = (b, ctx) => {
   const doneBtn = h("button",{class:"btn primary",type:"button"},"I’m finished: review my writing");
   doneBtn.addEventListener("click",()=>{ if(t){ used = t.stop(); } S.work[key]=Object.assign(S.work[key]||{}, {text:ta.value, words:words(ta.value), submitted:true, secs:used, kind:"W-"+(kind==="email"?"EM":"AD"), title:b.title||b.subject||b.course, at:new Date().toISOString()}); save(); after.hidden=false; doneBtn.hidden=true; after.scrollIntoView({behavior:"smooth",block:"start"}); });
   const checklist = h("div",{class:"checklist"}, ...BS.checklists[kind].map((c,i)=>h("label",null, h("input",{type:"checkbox",id:"ck-"+key+"-"+i}), h("span",{html:c}))));
-  const portfolio = ()=>{ const w = S.work[key]||{}; const kp = key.split("-"); return "StratSix · "+((S.account&&S.account.name)||"")+" · Writing Day "+kp[1]+" · "+(kind==="email"?"Write an Email":"Academic Discussion")+" · "+(b.title||b.subject||b.course||"")+"\n"+new Date().toLocaleDateString()+" · "+words(ta.value)+" words"+(w.secs? " · "+fmt(w.secs)+" used":"")+(w.rubric? " · self-score "+Object.entries(w.rubric).map(([a,v])=>a+" "+v).join(", "):"")+"\n\n"+ta.value+"\n\n――――――――――\n"; };
+  const portfolio = ()=>{ const w = S.work[key]||{}; const kp = key.split("-"); return "StratSix · "+((S.account&&S.account.name)||"")+" · "+(key.indexOf("writing2-")===0? "Writing II" : "Writing I")+" Day "+kp[1]+" · "+(kind==="email"?"Write an Email":"Academic Discussion")+" · "+(b.title||b.subject||b.course||"")+"\n"+new Date().toLocaleDateString()+" · "+words(ta.value)+" words"+(w.secs? " · "+fmt(w.secs)+" used":"")+(w.rubric? " · self-score "+Object.entries(w.rubric).map(([a,v])=>a+" "+v).join(", "):"")+"\n\n"+ta.value+"\n\n――――――――――\n"; };
   after.append(h("h4",null,"1. Check your response"), checklist, h("h4",null,"2. Score yourself with the rubric"), rubricPicker(kind==="email"?"email":"discussion", key), h("h4",null,"3. Compare with a model response"), h("div",{class:"model"}, h("div",{class:"eyebrow"},"Model response · "+words(b.model.replace(/<[^>]+>/g," "))+" words"), h("div",{html:b.model})), b.notes? h("div",{class:"why",html:b.notes}):null);
   const taskName = kind==="email"?"Email":"Academic Discussion";
-  const wPrompt = kind==="email"? String(b.scenario+" Points: "+b.bullets.join(" | ")+" To: "+b.to+" Subject: "+b.subject).replace(/<[^>]+>/g,"") : String("Course: "+b.course+". Professor: "+b.question+" "+b.posts.map(p=>p[0]+": "+p[1]).join(" ")).replace(/<[^>]+>/g,"");
+  const wMod = key.indexOf("writing2-")===0? "[Writing II · Day "+key.split("-")[1]+"] " : "[Writing I · Day "+key.split("-")[1]+"] ";
+  const wPrompt = wMod + (kind==="email"? String(b.scenario+" Points: "+b.bullets.join(" | ")+" To: "+b.to+" Subject: "+b.subject).replace(/<[^>]+>/g,"") : String("Course: "+b.course+". Professor: "+b.question+" "+b.posts.map(p=>p[0]+": "+p[1]).join(" ")).replace(/<[^>]+>/g,""));
   const sendMsg = h("div",{class:"small muted"});
   const sendBtn = h("button",{class:"btn red",type:"button"},"Send for AI feedback");
   const lastW = (S.subs||[]).find(x=>x.kind==="writing" && x.key===key);
@@ -8437,7 +8439,7 @@ function viewStudents(){
   return h("main",{class:"page"}, top, list.length? h("div",{class:"stack",style:"gap:8px"}, ...list) : h("p",{class:"muted"},"No students have signed in yet."));
 }
 function navBar(){
-  const items = [["home","Dashboard"],["reading","Reading"],["listening","Listening"],["writing","Writing"],["speaking","Speaking"],["sim","Test Simulator"],["guides","Guides"],...((S.account&&S.account.role==="teacher")? [["students","Students"]] : []),["teacher","Teacher guide"]];
+  const items = [["home","Dashboard"],["reading","Reading"],["listening","Listening"],["writing","Writing I"],["writing2","Writing II"],["speaking","Speaking"],["sim","Test Simulator"],["guides","Guides"],...((S.account&&S.account.role==="teacher")? [["students","Students"]] : []),["teacher","Teacher guide"]];
   const cur = VIEW.sec || ((VIEW.name==="tutorial")? "guides" : (VIEW.name==="simrun"||VIEW.name==="simreport")? "sim" : VIEW.name);
   return h("header",{class:"bar"}, h("div",{class:"bar-in"},
     h("button",{class:"brand",onclick:()=>go({name:"home"}),"aria-label":"StratSix dashboard"}, brandMark(), h("span",{class:"brand-name"},"StratSix", h("span",null,"· iBT"))),
@@ -8530,7 +8532,7 @@ function viewHome(){
     h("div",{class:"panel stack namebox"}, h("div",{class:"eyebrow"},"My account"), h("div",null, h("b",{style:"font-size:1.1rem"}, (S.account&&S.account.name)||S.name||"Teacher preview"), h("div",{class:"small muted mono"}, (S.account&&S.account.email)||"")),
       signedIn() ? h("div",{class:"row"}, h("span",{class:"pill ok"},"Signed in with Google"), h("button",{class:"btn ghost sm",type:"button",onclick:signOutGoogle},"Sign out")) : null,
       h("div",{class:"kv"}, "Started", h("b",null, new Date(S.started).toLocaleDateString())),
-      h("div",{class:"kv"}, "Days completed", h("b",null, SECS.reduce((a,s)=>a+secStats(s).done,0)+" / 68")),
+      h("div",{class:"kv"}, "Days completed", h("b",null, SECS.reduce((a,s)=>a+secStats(s).done,0)+" / "+(SECS.length*17))),
       h("div",{class:"kv"}, "Progress saved", h("b",null, signedIn()? "to your account" : "on this device")),
       h("button",{class:"btn sm",onclick:()=>go({name:"progress"})},"Share a report or back up"))
   );
@@ -8547,7 +8549,8 @@ function viewHome(){
 }
 function dayMinutes(d){ const m = d.stages.reduce((a,s)=>a+(s.mins||0),0); return m || d.minutes || 60; }
 function durText(m){ const hh = Math.floor(m/60), mm = m%60; return hh? hh+" h"+(mm? " "+mm+" min":"") : mm+" min"; }
-function cap(s){ return s.charAt(0).toUpperCase()+s.slice(1); }
+function cap(s){ if(s==="writing") return "Writing I"; if(s==="writing2") return "Writing II"; return s.charAt(0).toUpperCase()+s.slice(1); }
+function scap(s){ return s==="writing"? "Writing" : cap(s); }
 
 const REQ_LABEL = {hardset:"Extra Hard Set (90% to pass)", tutorial:"watch the tutorial to the end", etsself:"test-style self-score (11 responses)", dictation:"dictation", mcq:"questions", cw:"Complete the Words", listen:"listening questions", response:"Choose a Response", bas:"Build a Sentence", write:"writing task and self-review", repeat:"Listen and Repeat self-marks", interview:"interview self-score", typing:"typing test", analyzer:"fluency check", reflect:"reflection", mock:"mock test (both modules)"};
 function rubricDone(r,id){ return !!r && BS.rubrics[id].criteria.every(c=>r[c.id]!=null); }
@@ -8671,7 +8674,7 @@ function viewHard(){
 }
 
 function viewTutorials(){
-  const groups = ["reading","listening","writing","speaking"];
+  const groups = SECS;
   return h("div",null, h("div",{class:"stack",style:"margin-bottom:16px"}, h("div",{class:"eyebrow"},"Narrated lessons"), h("h2",null,"Tutorials"), h("p",{class:"muted",style:"max-width:70ch"},"One short animated tutorial for each of the 12 TOEFL task types. Each one shows the task, the strategy step by step, and a worked example. Watch it before you practice the task, and rewatch it any time.")),
     ...groups.map(g=>h("div",{class:"stack",style:"margin-bottom:18px"}, h("h2",null,cap(g)), h("div",{class:"tu-lib"}, ...Object.values(BS.tutorials).filter(t=>t.sec===g).map(t=>h("button",{class:"tu-card",onclick:()=>go({name:"tutorial",id:t.id})}, h("span",{class:"ic",html:ICON.play}), h("b",null,t.task), h("span",{class:"small muted"}, t.mins+" min · "+t.ch.length+" chapters"), h("span",{class:"pill "+(S.tut[t.id]?"ok":"plain"),style:"align-self:flex-start"}, S.tut[t.id]? "Watched":"Not watched")))))));
 }
@@ -8777,7 +8780,7 @@ function driveStatus(){ return h("div",{class:"panel stack",style:"margin-top:16
   sbOn()? h("div",{class:"row"}, h("span",{class:"pill ok"},"Connected"), h("span",{class:"small muted"},"Students sign in with Google. Their recordings, writing and scores are stored securely in Supabase and appear in the Review queue.")) :
   h("p",{class:"small muted"},"Not connected. Reload the page. If this stays, check your internet connection.")); }
 /* ---------- teacher lesson plans (PDF files published with the page) ---------- */
-const PLANS = SECS.map(sec=>({sec, file:"plans/StratSix-Lesson-Plans-"+cap(sec)+".pdf", name:"StratSix-Lesson-Plans-"+cap(sec)+".pdf"}));
+const PLANS = SIMMODS.map(sec=>({sec, file:"plans/StratSix-Lesson-Plans-"+cap(sec)+".pdf", name:"StratSix-Lesson-Plans-"+cap(sec)+".pdf"}));
 async function getPlan(pl, btn){
   const old = btn.textContent; btn.disabled = true; btn.textContent = "Preparing…";
   try{
@@ -8791,7 +8794,7 @@ async function getPlan(pl, btn){
 function plansPanel(){
   const cards = PLANS.map(pl=>{ const s = BS.sections[pl.sec]; const b = h("button",{class:"btn primary sm",type:"button"},"Download PDF"); b.addEventListener("click",()=>getPlan(pl,b));
     return h("div",{class:"sec-card",style:"cursor:default"}, h("div",{class:"row",style:"justify-content:space-between"}, h("span",{class:"code"}, s.code), h("span",{class:"pill plain"},"19 pages")), h("h3",null, s.title+" lesson plans"), h("div",{class:"small muted"},"Cover, the 17 classes at a glance, then one page per day: run sheet for the 3-hour class, what to teach, board plan, concept checks, likely errors, support and stretch, exit ticket and work to collect."), h("div",{class:"row"}, b, h("a",{class:"btn ghost sm",href:pl.file,target:"_blank",rel:"noopener"},"Open"))); });
-  return h("div",{class:"panel stack",style:"margin-top:16px"}, h("div",{class:"eyebrow"},"For your live classes"), h("h2",null,"Lesson plans (PDF)"), h("p",{class:"muted small"},"One PDF per section with a lesson plan for every class (17 per section, 68 in total). Each plan follows the 3-hour format: a 10-minute warm-up, 30–45 minutes led by you, about two hours on the StratSix day while you circulate, and a 10-minute exit ticket. Days that match an ETS TOEFL iBT® lesson plan say so: teach from your own copy of that plan and use these pages for timing and follow-up. Day N is on page N + 2."), h("div",{class:"sections"}, ...cards));
+  return h("div",{class:"panel stack",style:"margin-top:16px"}, h("div",{class:"eyebrow"},"For your live classes"), h("h2",null,"Lesson plans (PDF)"), h("p",{class:"muted small"},"One PDF per section with a lesson plan for every class (17 per module). Each plan follows the 3-hour format: a 10-minute warm-up, 30–45 minutes led by you, about two hours on the StratSix day while you circulate, and a 10-minute exit ticket. Days that match an ETS TOEFL iBT® lesson plan say so: teach from your own copy of that plan and use these pages for timing and follow-up. Day N is on page N + 2."), h("div",{class:"sections"}, ...cards));
 }
 
 /* ---------------- StratSix: feedback and teacher review ---------------- */
@@ -8899,7 +8902,7 @@ let simIv = null, simAuto = false;
 function simState(n){ S.sim = S.sim || {}; return S.sim[n] = S.sim[n] || {cur:null, done:[]}; }
 function simPlan(n){ return SIM.plan.find(p=>p.n===n); }
 function simOpen(p){ if(S.teacher) return true; if(p.mod!=="all" && !modOpen(p.mod)) return false; if(p.mod==="all") return SECS.every(s=>!!(S.days[dayKey(s,17)]||{}).done); return !p.after || !!(S.days[dayKey(p.mod,p.after)]||{}).done; }
-function simLockText(p){ if(p.mod!=="all" && !modOpen(p.mod)) return modLockText(p.mod); return p.mod==="all" ? "Unlocks when you complete Day 17 in all four modules" : "Unlocks when you complete "+cap(p.mod)+" Day "+p.after; }
+function simLockText(p){ if(p.mod!=="all" && !modOpen(p.mod)) return modLockText(p.mod); return p.mod==="all" ? "Unlocks when you complete Day 17 in all five modules" : "Unlocks when you complete "+scap(p.mod)+" Day "+p.after; }
 function simLoad(n, cb){
   const B = window.BS_TESTS = window.BS_TESTS || {};
   if(B[n]){ cb(B[n]); return; }
@@ -8976,7 +8979,7 @@ function viewSim(){
     h("li",null,h("div",null,h("b",null,"Use headphones and Chrome or Edge"),h("span",null,"Each listening and speaking audio plays once. Check your voice settings in the Dashboard before the test."))),
     h("li",null,h("div",null,h("b",null,"Have your phone ready"),h("span",null,"Record the whole Speaking section with your phone’s voice recorder, then send it to your Drive folder from your score report."))),
     h("li",null,h("div",null,h("b",null,"Score your writing and speaking"),h("span",null,"Reading, Listening and Build a Sentence are scored automatically. After the test, Claude can score your writing and speaking for you. Your teacher also scores your writing and recording.")))));
-  const lists = groups.map(g=>h("section",{class:"stack"}, h("div",{class:"row",style:"justify-content:space-between;align-items:baseline"}, h("h2",null, g==="all"? "Final rehearsal" : cap(g)+" module"), h("span",{class:"small muted"}, g==="all"? "After all four modules" : "Days 1–17")), h("div",{class:"sim-grid"}, ...SIM.plan.filter(p=>p.mod===g).map(card))));
+  const lists = groups.map(g=>h("section",{class:"stack"}, h("div",{class:"row",style:"justify-content:space-between;align-items:baseline"}, h("h2",null, g==="all"? "Final rehearsal" : scap(g)+" module"), h("span",{class:"small muted"}, g==="all"? "After all four modules" : "Days 1–17")), h("div",{class:"sim-grid"}, ...SIM.plan.filter(p=>p.mod===g).map(card))));
   return h("main",{class:"page stack",style:"gap:20px"}, intro, h("div",{class:"sim-cols"}, h("div",{class:"stack",style:"gap:22px;min-width:0"}, ...lists), rules), h("p",{class:"small muted"},"Bands are practice estimates from StratSix’s own scoring model. ETS does not publish how raw scores convert to bands, so treat them as a guide to your progress, not as an official score."));
 }
 
@@ -9083,7 +9086,7 @@ function simIntro(n, T, onStart){
   start.addEventListener("click",()=>{ if(!ok.checked){ toast("Tick the box to confirm you are ready."); return; } simAuto = true; onStart(); });
   const check = h("button",{class:"btn sm",type:"button",onclick:()=>TTS.speak(["W: This is the woman’s voice you will hear in the test.","M: And this is the man’s voice. If you can hear us clearly, you are ready."], ()=>{})},"Play a sound check");
   return h("div",{class:"page stack",style:"max-width:820px;gap:16px"},
-    h("div",{class:"sim-hero"}, h("div",{class:"stack",style:"gap:8px"}, h("div",{class:"eyebrow"}, (p.mod==="all"? "" : cap(p.mod)+" module · ")+p.role), h("h1",null,"Test "+n), h("p",null, T.title || "Full-length practice test"))),
+    h("div",{class:"sim-hero"}, h("div",{class:"stack",style:"gap:8px"}, h("div",{class:"eyebrow"}, (p.mod==="all"? "" : scap(p.mod)+" module · ")+p.role), h("h1",null,"Test "+n), h("p",null, T.title || "Full-length practice test"))),
     h("div",{class:"panel stack"}, h("h2",null,"How this test works"),
       h("div",{class:"tbl-wrap"}, h("table",{class:"format-table"}, h("thead",null,h("tr",null,h("th",null,"Section"),h("th",null,"Time"),h("th",null,"Rules"))), h("tbody",null,
         h("tr",null,h("td",{class:"sec"},"Reading"),h("td",{class:"mono"},SIM.t.rM1+" + "+SIM.t.rM2+" min"),h("td",null,"Two modules. You can go back to earlier questions inside a module, but not after you submit it.")),
@@ -9109,9 +9112,9 @@ function simPartIntro(n, T, cur, sec, part, onGo){
   const tx = SIM_PART_TEXT[sec+"."+part];
   const go_ = h("button",{class:"btn red",type:"button"}, sec==="speaking"&&part==="lr"? "My recorder is on. Begin" : "Begin");
   go_.addEventListener("click",()=>{ simAuto = true; if(sec==="speaking" && part==="lr"){ cur.tl = {t0:Date.now(), w:[]}; save(); } onGo(); });
-  const idx = SECS.indexOf(sec);
-  const steps = h("div",{class:"sim-steps"}, ...SECS.map((s,i)=>h("span",{class: i<idx? "done" : i===idx? "on" : ""}, cap(s))));
-  return h("div",{class:"stack"}, simBar("Test "+n, cap(sec), null, null),
+  const idx = SIMMODS.indexOf(sec);
+  const steps = h("div",{class:"sim-steps"}, ...SIMMODS.map((s,i)=>h("span",{class: i<idx? "done" : i===idx? "on" : ""}, scap(s))));
+  return h("div",{class:"stack"}, simBar("Test "+n, scap(sec), null, null),
     h("div",{class:"page stack",style:"max-width:760px;gap:16px"}, steps,
       h("div",{class:"panel stack sim-dir"}, h("div",{class:"eyebrow"},"Directions"), h("h1",null, tx[0]), h("p",{style:"max-width:62ch"}, tx[1]), h("div",{class:"row"}, go_))));
 }
@@ -9325,7 +9328,7 @@ function simReportDraw(box, n, T, A, st){
     tiles.append(tile("Reading", b.reading, ""), tile("Listening", b.listening, ""), tile("Writing", b.writing, "Score your writing below"), tile("Speaking", b.speaking, "Score your recording below"),
       h("div",{class:"band-tile total"+(b.overall==null?" pend":"")}, h("span",{class:"eyebrow"},"Overall"), h("b",{class:"mono"}, bandCell(b.overall)), h("span",{class:"small"}, b.overall==null? "Appears when all four sections are scored" : "CEFR "+cefrOf(b.overall))));
     detail.innerHTML = "";
-    ["reading","listening"].forEach(sec=>{ const x = r[sec]; if(!x) return; detail.append(h("div",{class:"kv"}, cap(sec)+": Module 1 "+x.m1.c+"/"+x.m1.t+" → "+(x.up? "upper" : "lower")+" Module 2 "+x.m2.c+"/"+x.m2.t, h("b",null, pct(x.m1.c+x.m2.c, x.m1.t+x.m2.t)+"%"))); });
+    ["reading","listening"].forEach(sec=>{ const x = r[sec]; if(!x) return; detail.append(h("div",{class:"kv"}, scap(sec)+": Module 1 "+x.m1.c+"/"+x.m1.t+" → "+(x.up? "upper" : "lower")+" Module 2 "+x.m2.c+"/"+x.m2.t, h("b",null, pct(x.m1.c+x.m2.c, x.m1.t+x.m2.t)+"%"))); });
     if(r.writing) detail.append(h("div",{class:"kv"}, "Build a Sentence", h("b",null, r.writing.bas.c+"/"+r.writing.bas.t)));
     const per = {}; ["reading","listening"].forEach(sec=>{ const x = r[sec]; if(x) Object.assign(per, x.per); });
     tasks.innerHTML = ""; Object.keys(per).forEach(k=>{ const v = per[k]; const pc = pct(v.c,v.t); tasks.append(h("div",{class:"task-bar"}, h("span",{class:"small"}, TT[k]), h("div",{class:"meter"+(pc<60?" red":"")}, h("i",{style:"width:"+pc+"%"})), h("span",{class:"mono small"}, v.c+"/"+v.t))); });
@@ -9333,7 +9336,7 @@ function simReportDraw(box, n, T, A, st){
   const detail = h("div",{class:"stack",style:"gap:6px"}); const tasks = h("div",{class:"stack",style:"gap:8px"});
   drawTiles();
   const when = new Date(A.end||A.at).toLocaleDateString();
-  const head = h("div",{class:"sim-hero"}, h("div",{class:"stack",style:"gap:10px"}, h("div",{class:"eyebrow"}, "Score report · Test "+n+" · "+(p.mod==="all"? "" : cap(p.mod)+" module · ")+p.role+" · "+when), h("h1",null,"Your estimated bands"), tiles,
+  const head = h("div",{class:"sim-hero"}, h("div",{class:"stack",style:"gap:10px"}, h("div",{class:"eyebrow"}, "Score report · Test "+n+" · "+(p.mod==="all"? "" : scap(p.mod)+" module · ")+p.role+" · "+when), h("h1",null,"Your estimated bands"), tiles,
     h("div",{class:"small",style:"opacity:.8"},"Bands are practice estimates on the 1–6 scale, rounded to the nearest half band. The overall band is the average of the four sections.")),
     st.done.length>1? h("div",{class:"row"}, h("label",{for:"sim-att",class:"small"},"Attempt"), h("select",{class:"input",id:"sim-att",style:"max-width:220px",onchange:e=>go({name:"simreport",n,i:+e.target.value})}, ...st.done.map((a,i)=>h("option",{value:String(i),selected:a===A?true:null}, "Attempt "+(i+1)+" · "+new Date(a.end||a.at).toLocaleDateString())))) : null);
   const summary = h("div",{class:"two"}, h("div",{class:"panel stack"}, h("h2",null,"Reading and Listening"), detail, h("p",{class:"small muted"},"Module 1 decides your route. "+Math.round(SIM.cut*100)+"% or more in Module 1 opens the upper Module 2, which has a higher score ceiling.")), h("div",{class:"panel stack"}, h("h2",null,"Accuracy by task type"), tasks));
@@ -9390,7 +9393,7 @@ function simReportLines(){
   const out = [];
   SIM.plan.forEach(p=>{ const st = (S.sim||{})[p.n]; if(!st || !st.done || !st.done.length) return;
     st.done.forEach((A,i)=>{ const b = simBands(A); const r = A.res||{};
-      out.push("  Test "+p.n+" ("+(p.mod==="all"? "" : cap(p.mod)+" ")+p.role+"), attempt "+(i+1)+", "+new Date(A.end||A.at).toLocaleDateString()+": Reading "+bandCell(b.reading)+(r.reading? " ("+(r.reading.up?"upper":"lower")+")":"")+" · Listening "+bandCell(b.listening)+(r.listening? " ("+(r.listening.up?"upper":"lower")+")":"")+" · Writing "+(b.writing==null? "not self-scored" : bandCell(b.writing))+" · Speaking "+(b.speaking==null? "not self-scored" : bandCell(b.speaking))+(b.overall!=null? " · OVERALL "+bandCell(b.overall)+" ("+cefrOf(b.overall)+")" : "")); }); });
+      out.push("  Test "+p.n+" ("+(p.mod==="all"? "" : scap(p.mod)+" ")+p.role+"), attempt "+(i+1)+", "+new Date(A.end||A.at).toLocaleDateString()+": Reading "+bandCell(b.reading)+(r.reading? " ("+(r.reading.up?"upper":"lower")+")":"")+" · Listening "+bandCell(b.listening)+(r.listening? " ("+(r.listening.up?"upper":"lower")+")":"")+" · Writing "+(b.writing==null? "not self-scored" : bandCell(b.writing))+" · Speaking "+(b.speaking==null? "not self-scored" : bandCell(b.speaking))+(b.overall!=null? " · OVERALL "+bandCell(b.overall)+" ("+cefrOf(b.overall)+")" : "")); }); });
   return out;
 }
 
@@ -9667,14 +9670,14 @@ function simHomeStrip(){
   const p = SIM.plan.find(x=>SIM.built.includes(x.n) && simOpen(x) && !simState(x.n).done.length);
   const done = SIM.plan.reduce((a,x)=>a+(simState(x.n).done.length?1:0),0);
   return h("div",{class:"panel",style:"margin-top:16px;display:flex;gap:16px;align-items:center;flex-wrap:wrap;justify-content:space-between"},
-    h("div",{class:"stack",style:"gap:4px;min-width:0"}, h("div",{class:"eyebrow"},"Test Simulator"), h("h3",null, p? "Next: Test "+p.n+" · "+(p.mod==="all"?"":cap(p.mod)+" ")+p.role : "Full-length practice tests"), h("div",{class:"small muted"}, done+" of 15 tests completed · about 90 minutes each · adaptive Reading and Listening")),
+    h("div",{class:"stack",style:"gap:4px;min-width:0"}, h("div",{class:"eyebrow"},"Test Simulator"), h("h3",null, p? "Next: Test "+p.n+" · "+(p.mod==="all"?"":scap(p.mod)+" ")+p.role : "Full-length practice tests"), h("div",{class:"small muted"}, done+" of 15 tests completed · about 90 minutes each · adaptive Reading and Listening")),
     h("button",{class:"btn primary",onclick:()=>go({name:"sim"})}, p? "Open the Test Simulator" : "See all tests"));
 }
 BS.teacher.steps.push(["Use the Test Simulator","Each module has a diagnostic test (open from Day 1), Mock 1 (opens when Day "+SIM.week1+" is complete) and Mock 2 (opens when Day "+SIM.late+" is complete). Tests 13–15 are final rehearsals after all four modules. Students upload their simulator writing and speaking from the score report; the task name starts with “Test”."]);
 
 /* ---------- Module schedule (teacher switch, stored in the page itself) ---------- */
 const REVIEW_DAYS = 20;
-const ACC_DEFAULT = {reading:{mode:"closed",s:"",e:""},listening:{mode:"closed",s:"",e:""},writing:{mode:"closed",s:"",e:""},speaking:{mode:"closed",s:"",e:""}};
+const ACC_DEFAULT = {reading:{mode:"closed",s:"",e:""},listening:{mode:"closed",s:"",e:""},writing:{mode:"closed",s:"",e:""},writing2:{mode:"closed",s:"",e:""},speaking:{mode:"closed",s:"",e:""}};
 let ACC = (function(){ try{ const el = document.getElementById("bs-access"); const o = el ? JSON.parse(el.textContent) : null; return Object.assign({}, ACC_DEFAULT, o||{}); }catch(e){ return Object.assign({}, ACC_DEFAULT); } })();
 function dOnly(s){ const [y,mo,d] = s.split("-").map(Number); return new Date(y, mo-1, d); }
 function fmtD(s){ return s? dOnly(s).toLocaleDateString(undefined,{day:"numeric",month:"short",year:"numeric"}) : ""; }
@@ -9846,6 +9849,27 @@ function __listeningPatch(){ const P = {"1":{"blocks":{"1.0":{"items":[{"line":"
 }
 __listeningPatch();
 /*LISTENING_PATCH_END*/
+/*WRITING_PATCH_START*/
+function __writingPatch(){
+ const C = {"W1":["o1","o2","o3","o4","o5","o6","n7","n8","n9","n10","n11","n12","n13","n14","n15","n16","n17"],"W2":["o11","n2","o12","n4","n5","o13","n7","n8","n9","n10","n11","n12","n13","n14","n15","n16","n17"],"new":{"1":{},"2":{}},"over":{"2o11":{"title":"Academic Discussion: reading the task and taking a position"},"2o12":{"title":"Academic Discussion: developing support"},"2o13":{"title":"Academic Discussion: adding something new"}}};
+ const base = BS.sections.writing; const old = base.days.slice(); const O = n => old.find(d=>d.n===n);
+ const stub = (m,n) => ({n, title:"In preparation", task:"Writing", minutes:60, objective:"this day is being written.", stages:[{kind:"learn", title:"Coming soon", mins:5, blocks:[{t:"html", html:"<p>This day is being prepared.</p>"}]}]});
+ function build(list, mod){
+  return list.map((id,i)=>{ const n = i+1; let d;
+   if(id[0]==="o"){ d = Object.assign({}, O(+id.slice(1)), (C.over[mod+id]||{})); d.stages = d.stages.slice(); }
+   else d = (C.new[mod] && C.new[mod][id.slice(1)]) || stub(mod, n);
+   d.n = n; return d; });
+ }
+ /* Writing I: replace the two discussion reviews inside Build a Sentence days with emails */
+ const w1 = build(C.W1,"1"), w2 = build(C.W2,"2");
+ w1.forEach(d=>{ const x = C.new["1"]["x"+d.n]; if(x){ const i = d.stages.findIndex(s=>/Mixed review: discussion post/.test(s.title||"")); if(i>=0) d.stages[i] = x; } });
+ const intro = C.new["1"]["intro"]; if(intro && w1[0]) w1[0].stages[0].blocks.unshift(intro);
+ base.days = w1; base.title = "Writing I"; base.blurb = "Build a Sentence and Write an Email. Word order, grammar, tone and speed.";
+ BS.sections.writing2 = {code:"W2", title:"Writing II", time:"≈ 10 min", blurb:"Write for an Academic Discussion. Positions, support, new ideas, precise language and editing.", days:w2};
+ if(BS.tutorials && BS.tutorials["w-ad"]) BS.tutorials["w-ad"].sec = "writing2";
+}
+__writingPatch();
+/*WRITING_PATCH_END*/
 
 const tok = (location.hash||"").slice(1);
 if(SECS.includes(tok)) VIEW = {name:"sec",sec:tok,day:lastDay(tok)}; else if(tok==="rubrics"||tok==="tutorials") VIEW={name:"guides",part:tok}; else if(["teacher","sim"].includes(tok)) VIEW={name:tok};
