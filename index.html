@@ -7391,7 +7391,6 @@ if(!S.started) S.started = new Date().toISOString();
 function persist(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} }
 let onSaveHook = null;
 function save(){ S._mod = Date.now(); persist(); if(onSaveHook){ try{ onSaveHook(); }catch(e){} } try{ syncSoon(); }catch(e){} }
-const TEACHER_PIN = "BS2026";
 /* Google Drive connector (Apps Script web app). Fill both values after the teacher deploys StratSix-Drive.gs. */
 const DRIVE_APP = { url: "https://script.google.com/macros/s/AKfycbzrC0TB5waVY4iIwj6GpE85YzgdkxSX_ZFe6KxFubduUrLnnaKOWkzwqcqToTe9CKRE/exec", code: "XUKGSTDR" };
 
@@ -7504,6 +7503,7 @@ async function adoptSession(session){
   let role = "student";
   try{ const r = await SB.from("profiles").select("role").eq("id", u.id).maybeSingle(); if(r && r.data && r.data.role) role = r.data.role; }catch(e){}
   S.account = Object.assign({}, prev, {name, email:String(u.email||"").toLowerCase(), uid:u.id, role, created:prev.created || new Date().toISOString()});
+  if(role!=="teacher") S.teacher = false;
   if(name) S.name = name;
   save(); setTimeout(restoreProgress,0); return true;
 }
@@ -8665,9 +8665,7 @@ function viewRegister(){
     h("div",{class:"small muted"}, "Your progress is saved to your account automatically, so you can sign in on any device."));
   const code = h("textarea",{class:"textarea",style:"min-height:80px",id:"rg-restore","aria-label":"Backup code",placeholder:"Paste your backup code here"});
   const restore = h("details",{class:"panel"}, h("summary",{class:"q",style:"cursor:pointer"},"I already have an account on another device"), h("div",{class:"stack",style:"margin-top:10px"}, h("p",{class:"small muted"},"On your other device, open the Dashboard → Share a report, back up… → Copy backup code, then paste it here."), code, h("div",{class:"row"}, h("button",{class:"btn",type:"button",onclick:()=>{ try{ const t = code.value.trim(); const o = JSON.parse(t.startsWith("{")? t : decodeURIComponent(escape(atob(t)))); if(!o.days) throw 0; S = Object.assign(S,o); save(); toast("Account restored."); go({name:"home"}); }catch(e){ toast("That is not a StratSix backup code. Copy the whole code and try again."); } }},"Restore my account"))));
-  const pin = h("input",{class:"input",type:"password",id:"rg-pin","aria-label":"Teacher PIN",placeholder:"Teacher PIN",style:"max-width:180px"});
-  const teacher = h("details",{class:"small"}, h("summary",{style:"cursor:pointer"},"I am the teacher"), h("div",{class:"row",style:"margin-top:8px"}, pin, h("button",{class:"btn sm",type:"button",onclick:()=>{ if(pin.value.trim()===TEACHER_PIN){ S.teacher = true; save(); go({name:"teacher"}); } else toast("That PIN is not correct."); }},"Enter as teacher")));
-  return h("main",{class:"page",style:"max-width:720px"}, h("div",{class:"hero-main",style:"margin-bottom:16px"}, h("div",{class:"eyebrow"},"TOEFL iBT® test prep · 2026 format · B2–C1"), h("h1",null,"Sign in to StratSix"), h("p",null,"Sign in with your Google account. Your teacher can then see your work and give you feedback.")), h("div",{class:"panel stack"}, form), h("div",{style:"margin-top:12px"}, restore), h("div",{style:"margin-top:12px"}, teacher));
+  return h("main",{class:"page",style:"max-width:720px"}, h("div",{class:"hero-main",style:"margin-bottom:16px"}, h("div",{class:"eyebrow"},"TOEFL iBT® test prep · 2026 format · B2–C1"), h("h1",null,"Sign in to StratSix"), h("p",null,"Sign in with your Google account. Your teacher can then see your work and give you feedback.")), h("div",{class:"panel stack"}, form), h("div",{style:"margin-top:12px"}, restore));
 }
 function editProfile(){
   const a = S.account||{};
@@ -8970,10 +8968,10 @@ function voiceTip(){
 function settingRow(label, key, opts){ const sel = h("select",{class:"input",id:"set-"+key,style:"max-width:260px"}, ...opts.map(([v,l])=>h("option",{value:String(v),selected: String(S.settings[key])===String(v)?true:null}, l))); sel.addEventListener("change",()=>{ S.settings[key] = key==="rate"? +sel.value : sel.value; save(); toast(label+" updated."); }); return h("div",{class:"row"}, h("label",{for:"set-"+key,style:"min-width:140px;font-weight:600"},label), sel); }
 
 function teacherPanel(){
-  const pin = h("input",{class:"input",type:"password",id:"t-pin","aria-label":"Teacher PIN",placeholder:"Teacher PIN",style:"max-width:200px",autocomplete:"off"});
-  const on = h("button",{class:"btn primary",onclick:()=>{ if(pin.value.trim()===TEACHER_PIN || (S.account && S.account.role==="teacher")){ S.teacher=true; persist(); toast("Preview mode on. All days are open on this device."); render(); } else toast("That PIN is not correct."); }},"Open all days");
+  const isTeacherAcct = !!(S.account && S.account.role==="teacher");
+  const on = h("button",{class:"btn primary",onclick:()=>{ if(!isTeacherAcct){ toast("Preview mode is only for the teacher account."); return; } S.teacher=true; persist(); toast("Preview mode on. All days are open on this device."); render(); }},"Open all days");
   const off = h("button",{class:"btn",onclick:()=>{ S.teacher=false; persist(); toast("Preview mode off. Days lock again."); render(); }},"Turn preview mode off");
-  return h("div",{class:"panel stack",style:"margin-top:16px"}, h("h2",null,"Preview mode"), h("p",{class:"muted small"},"Students unlock each day by completing every activity of the previous day. To review or teach any day yourself, turn on preview mode on your own device."), S.teacher? h("div",{class:"row"}, h("span",{class:"pill ok"},"Preview mode is on"), off) : h("div",{class:"row"}, pin, on));
+  return h("div",{class:"panel stack",style:"margin-top:16px"}, h("h2",null,"Preview mode"), h("p",{class:"muted small"},"Students unlock each day by completing every activity of the previous day. To review or teach any day yourself, turn on preview mode on your own device. It works only when you are signed in with the teacher Google account."), S.teacher? h("div",{class:"row"}, h("span",{class:"pill ok"},"Preview mode is on"), off) : (isTeacherAcct? h("div",{class:"row"}, on) : h("div",{class:"small muted"},"Sign in with the teacher Google account to use preview mode.")));
 }
 function driveStatus(){ return h("div",{class:"panel stack",style:"margin-top:16px"}, h("h2",null,"Student data connection"),
   sbOn()? h("div",{class:"row"}, h("span",{class:"pill ok"},"Connected"), h("span",{class:"small muted"},"Students sign in with Google. Their recordings, writing and scores are stored securely in Supabase and appear in the Review queue.")) :
@@ -9916,7 +9914,7 @@ function lockedSection(sec){
   return h("main",{class:"page",style:"max-width:720px"}, h("div",{class:"panel stack"}, h("div",{class:"eyebrow"}, cap(sec)+" · 17 days"), h("h1",null, BS.sections[sec].title+" is locked"), h("p",null, modLockText(sec)),
     h("p",{class:"small muted"},"Finished modules stay open for review for "+REVIEW_DAYS+" days after they end."), unlockBox(sec, true)));
 }
-function refreshAccess(){ if(!SB) return; ssGet({action:"access"}).then(j=>{ if(j && j.cfg && typeof j.cfg==="object"){ const n = Object.assign({}, ACC_DEFAULT, j.cfg); if(JSON.stringify(n)!==JSON.stringify(ACC)){ ACC = n; try{ render(); }catch(e){} } } }).catch(()=>{}); }
+function refreshAccess(){ if(!SB) return; loadGrants(); ssGet({action:"access"}).then(j=>{ if(j && j.cfg && typeof j.cfg==="object"){ const n = Object.assign({}, ACC_DEFAULT, j.cfg); if(JSON.stringify(n)!==JSON.stringify(ACC)){ ACC = n; try{ render(); }catch(e){} } } }).catch(()=>{}); }
 function accessDoc(cfg){ return '<script type="application/json" id="bs-access">'+JSON.stringify(cfg).replace(/</g,"\\u003c")+'</scr'+'ipt>'; }
 function accessTool(){
   const draft = JSON.parse(JSON.stringify(ACC));
@@ -9953,41 +9951,52 @@ function accessTool(){
   return h("div",{class:"panel stack",style:"margin-top:16px"}, h("h2",null,"Module switches"), h("p",{class:"muted small"},"Choose what students can open. “Open by dates” opens the module on the first date and closes it on the second; students then keep "+REVIEW_DAYS+" days of review access. Changes reach every student after you press Save. Simulator tests follow the same switches."), ...rows, h("div",{class:"row"}, saveBtn), status);
 }
 
-/* ---------- individual day unlock codes ---------- */
-const UNL_SALT = "bandsix-unlock-v1";
-function unlockCode(email, sec, n){ const e = (email||"").trim().toLowerCase(); return sec[0].toUpperCase()+n+"-"+hash(e+"|"+sec+"|"+n+"|"+UNL_SALT).toString(36).toUpperCase().padStart(4,"0").slice(-4); }
-function modCode(email, sec, kind){ const e = (email||"").trim().toLowerCase(); return sec[0].toUpperCase()+kind+"-"+hash(e+"|"+sec+"|"+kind+"|"+UNL_SALT).toString(36).toUpperCase().padStart(4,"0").slice(-4); }
+/* ---------- individual access: the teacher grants it on the server (table unlock_grants) ---------- */
 function hasUnlock(sec, n){ const u = S.unlock||{}; return u["mod:"+sec]==="A" || !!u[dayKey(sec,n)]; }
-function unlockBox(sec, open){
-  const inp = h("input",{class:"input",id:"unl-"+sec,placeholder:"Code, e.g. R5-7KQ2",style:"max-width:180px;text-transform:uppercase",autocomplete:"off"});
-  const go_ = h("button",{class:"btn sm",type:"button"},"Open day");
-  go_.addEventListener("click",()=>{
-    const v = inp.value.trim().toUpperCase().replace(/\s+/g,"");
-    const email = (S.account&&S.account.email)||"";
-    const bad = ()=>toast("That code is not valid for your account in "+cap(sec)+". Check it with your teacher.");
-    const mm = /^([RLWS])([PA])-/.exec(v);
-    if(mm){ if(mm[1]!==sec[0].toUpperCase() || v!==modCode(email, sec, mm[2])) return bad();
-      S.unlock = S.unlock||{}; S.unlock["mod:"+sec] = mm[2]; save(); toast(mm[2]==="A"? cap(sec)+" is open: all 17 days." : cap(sec)+" is open. One new day each day."); go({name:"sec",sec}); return; }
-    const m = /^([RLWS])(\d{1,2})-/.exec(v); const n = m? +m[2] : 0;
-    if(!m || m[1]!==sec[0].toUpperCase() || n<1 || n>17 || v!==unlockCode(email, sec, n)) return bad();
-    S.unlock = S.unlock||{}; S.unlock[dayKey(sec,n)] = new Date().toISOString(); save(); toast("Day "+n+" is open."); go({name:"sec",sec,day:n});
-  });
-  return h("details",{class:"small",open:open?true:null}, h("summary",{style:"cursor:pointer"},"Have a code from your teacher?"), h("div",{class:"row",style:"margin-top:8px"}, inp, go_));
+async function loadGrants(){
+  if(!SB || !signedIn()) return;
+  try{
+    const r = await SB.from("unlock_grants").select("section,scope,created_at").eq("user_id", S.account.uid);
+    if(r.error) return;                         /* table not there yet or no connection: keep what we have */
+    const u = {}; (r.data||[]).forEach(g=>{ if(g.scope==="module_paced") u["mod:"+g.section] = "P"; else if(g.scope==="module_all") u["mod:"+g.section] = "A"; else { const n = +String(g.scope).slice(4); if(n>=1 && n<=17) u[dayKey(g.section,n)] = g.created_at; } });
+    if(JSON.stringify(u) !== JSON.stringify(S.unlock||{})){ S.unlock = u; persist(); render(); }
+  }catch(e){}
 }
+function unlockBox(sec, open){
+  const b = h("button",{class:"btn sm",type:"button"},"Check again");
+  b.addEventListener("click", async ()=>{ await loadGrants(); toast("Checked. If your teacher has opened it, it appears now."); });
+  return h("details",{class:"small",open:open?true:null}, h("summary",{style:"cursor:pointer"},"Need access?"), h("div",{class:"row",style:"margin-top:8px"}, h("span",{class:"muted"},"Ask your teacher to open this for you."), b));
+}
+const grantLabel = g => g.scope==="module_paced" ? "Whole module · one new day each day" : g.scope==="module_all" ? "Whole module · all 17 days" : "Only Day "+String(g.scope).slice(4);
 function unlockTool(){
-  const email = h("input",{class:"input",id:"uc-email",type:"email",placeholder:"student@gmail.com",style:"max-width:260px"});
-  const sec = h("select",{class:"input",id:"uc-sec",style:"max-width:160px"}, ...SECS.map(s=>h("option",{value:s},cap(s))));
-  const day = h("select",{class:"input",id:"uc-day",style:"max-width:280px"}, h("option",{value:"P"},"Whole module · one new day each day"), h("option",{value:"A"},"Whole module · all 17 days at once"), ...Array.from({length:17},(_,i)=>h("option",{value:String(i+1)},"Only Day "+(i+1))));
-  const out = h("div",{class:"stack"});
-  const btn = h("button",{class:"btn primary",type:"button"},"Create code");
-  btn.addEventListener("click",()=>{ const e = email.value.trim().toLowerCase(); if(!ANYMAIL.test(e)){ toast("Type the student’s email exactly as they registered it."); return; }
-    const whole = day.value==="P"||day.value==="A";
-    const code = whole? modCode(e, sec.value, day.value) : unlockCode(e, sec.value, +day.value);
-    const what = whole? "the whole "+cap(sec.value)+" module"+(day.value==="A"? " (all 17 days)" : " (one new day each day)") : cap(sec.value)+" Day "+day.value;
-    const msg = "StratSix: your code to open "+what+" is "+code+". Open "+cap(sec.value)+", press “Have a code from your teacher?” and type it.";
-    const ta = h("textarea",{class:"textarea",style:"min-height:80px",readonly:true,id:"uc-out"}); ta.value = msg;
-    out.innerHTML = ""; out.append(h("div",{style:"font-family:var(--f-mono);font-size:1.6rem;font-weight:600"}, code), ta, h("div",{class:"row"}, h("button",{class:"btn sm primary",type:"button",onclick:()=>copyText(msg, ta, "Copied. Send it to the student.")},"Copy message"))); });
-  return h("div",{class:"panel stack",style:"margin-top:16px"}, h("h2",null,"Give one student access"), h("p",{class:"muted small"},"Creates a code for one student only. It works only with the email the student registered with, so classmates cannot use it. It works even when the module is closed for the class. Choose the whole module (at the normal pace of one day per day, or all days at once) or a single day."), h("div",{class:"row"}, email, sec, day, btn), out);
+  const who = h("select",{class:"input",id:"uc-who","aria-label":"Student",style:"max-width:320px"}, h("option",{value:""},"Loading students…"));
+  const sec = h("select",{class:"input",id:"uc-sec","aria-label":"Section",style:"max-width:160px"}, ...SECS.map(x=>h("option",{value:x},cap(x))));
+  const day = h("select",{class:"input",id:"uc-day","aria-label":"What to open",style:"max-width:280px"}, h("option",{value:"P"},"Whole module · one new day each day"), h("option",{value:"A"},"Whole module · all 17 days at once"), ...Array.from({length:17},(_,i)=>h("option",{value:String(i+1)},"Only Day "+(i+1))));
+  const list = h("div",{class:"stack"}), status = h("div",{class:"small"});
+  const showGrants = async ()=>{
+    list.innerHTML = ""; if(!who.value) return;
+    const r = await SB.from("unlock_grants").select("id,section,scope,created_at").eq("user_id", who.value).order("created_at");
+    if(r.error){ status.textContent = sbErr(r.error); return; }
+    if(!(r.data||[]).length){ list.append(h("div",{class:"small muted"},"No individual access given to this student yet.")); return; }
+    r.data.forEach(g=>list.append(h("div",{class:"row"}, h("span",null, cap(g.section)+" · "+grantLabel(g)), h("button",{class:"btn sm outline",type:"button",onclick:async()=>{ const d = await SB.from("unlock_grants").delete().eq("id", g.id); status.textContent = d.error? sbErr(d.error) : "Removed."; showGrants(); }},"Remove"))));
+  };
+  who.addEventListener("change", showGrants);
+  setTimeout(async ()=>{
+    try{ const r = await SB.from("profiles").select("id,full_name,email").eq("role","student").order("full_name"); if(r.error) throw r.error;
+      who.innerHTML = ""; who.append(h("option",{value:""}, (r.data||[]).length? "Choose a student" : "No students yet")); (r.data||[]).forEach(u=>who.append(h("option",{value:u.id}, (u.full_name||u.email)+" · "+u.email)));
+    }catch(e){ who.innerHTML = ""; who.append(h("option",{value:""},"Could not load students")); status.textContent = sbErr(e); }
+  },0);
+  const btn = h("button",{class:"btn primary",type:"button"},"Give access");
+  btn.addEventListener("click", async ()=>{
+    if(!who.value){ toast("Choose a student first."); return; }
+    const scope = day.value==="P" ? "module_paced" : day.value==="A" ? "module_all" : "day:"+day.value;
+    btn.disabled = true; status.textContent = "Saving…";
+    const r = await SB.from("unlock_grants").upsert({user_id:who.value, section:sec.value, scope}, {onConflict:"user_id,section,scope", ignoreDuplicates:true});
+    btn.disabled = false;
+    status.textContent = r.error ? sbErr(r.error) : "Done. The student sees it the next time they open StratSix.";
+    showGrants();
+  });
+  return h("div",{class:"panel stack",style:"margin-top:16px"}, h("h2",null,"Give one student access"), h("p",{class:"muted small"},"Opens a module or a single day for one student only. It works even when the module is closed for the class, and it is stored on the server, so it cannot be copied or shared. To take it back, press Remove."), h("div",{class:"row"}, who, sec, day, btn), status, list);
 }
 
 function siteFoot(){ return h("footer",{class:"site-foot"}, h("p",null,"TOEFL® and TOEFL iBT® are registered trademarks of ETS. StratSix is an independent course and is not endorsed or approved by ETS. All passages, listening scripts, tasks, model answers and scoring descriptions in StratSix are original material. Scores in StratSix are practice estimates, not official scores. "), h("p",null, h("a",{href:"privacy.html",target:"_blank",rel:"noopener"},"Privacy Policy"))); }
@@ -10472,7 +10481,7 @@ function a11yLabel(root){
 }
 try{ new MutationObserver(()=>{ clearTimeout(a11yLabel._t); a11yLabel._t = setTimeout(()=>a11yLabel(),150); }).observe(document.body,{childList:true,subtree:true}); }catch(e){}
 /* test hooks exist only when a test harness sets window.__BS_ENABLE_TEST before the page loads; nothing is exposed to students */
-if(window.__BS_ENABLE_TEST) window.__BS_TEST = {dayOverride, isUnlocked, modOpen, modCalc, unlockCode, setACC:c=>{ ACC = Object.assign({}, ACC_DEFAULT, c); }, getACC:()=>ACC, viewHash, parseHash, blkKey, buildCW, ssPost, ssGet, signedIn, syncNow, loadStudents, go, adoptSession, signOutGoogle, restoreProgress, syncLabel, syncDirty, S:()=>S, SYNC, timers:{clear(){ clearTimeout(_syncT); clearTimeout(_retryT); }}, save};
+if(window.__BS_ENABLE_TEST) window.__BS_TEST = {dayOverride, isUnlocked, modOpen, modCalc, loadGrants, setACC:c=>{ ACC = Object.assign({}, ACC_DEFAULT, c); }, getACC:()=>ACC, viewHash, parseHash, blkKey, buildCW, ssPost, ssGet, signedIn, syncNow, loadStudents, go, adoptSession, signOutGoogle, restoreProgress, syncLabel, syncDirty, S:()=>S, SYNC, timers:{clear(){ clearTimeout(_syncT); clearTimeout(_retryT); }}, save};
 })();
 
 </script>
