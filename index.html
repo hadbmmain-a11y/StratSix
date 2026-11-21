@@ -8780,7 +8780,8 @@ function driveStatus(){ return h("div",{class:"panel stack",style:"margin-top:16
   sbOn()? h("div",{class:"row"}, h("span",{class:"pill ok"},"Connected"), h("span",{class:"small muted"},"Students sign in with Google. Their recordings, writing and scores are stored securely in Supabase and appear in the Review queue.")) :
   h("p",{class:"small muted"},"Not connected. Reload the page. If this stays, check your internet connection.")); }
 /* ---------- teacher lesson plans (PDF files published with the page) ---------- */
-const PLANS = SIMMODS.map(sec=>({sec, file:"plans/StratSix-Lesson-Plans-"+cap(sec)+".pdf", name:"StratSix-Lesson-Plans-"+cap(sec)+".pdf"}));
+const planSlug = sec => sec==="writing"? "Writing-I" : sec==="writing2"? "Writing-II" : cap(sec);
+const PLANS = SECS.map(sec=>({sec, file:"plans/StratSix-Lesson-Plans-"+planSlug(sec)+".pdf", name:"StratSix-Lesson-Plans-"+planSlug(sec)+".pdf"}));
 async function getPlan(pl, btn){
   const old = btn.textContent; btn.disabled = true; btn.textContent = "Preparing…";
   try{
@@ -8794,7 +8795,7 @@ async function getPlan(pl, btn){
 function plansPanel(){
   const cards = PLANS.map(pl=>{ const s = BS.sections[pl.sec]; const b = h("button",{class:"btn primary sm",type:"button"},"Download PDF"); b.addEventListener("click",()=>getPlan(pl,b));
     return h("div",{class:"sec-card",style:"cursor:default"}, h("div",{class:"row",style:"justify-content:space-between"}, h("span",{class:"code"}, s.code), h("span",{class:"pill plain"},"19 pages")), h("h3",null, s.title+" lesson plans"), h("div",{class:"small muted"},"Cover, the 17 classes at a glance, then one page per day: run sheet for the 3-hour class, what to teach, board plan, concept checks, likely errors, support and stretch, exit ticket and work to collect."), h("div",{class:"row"}, b, h("a",{class:"btn ghost sm",href:pl.file,target:"_blank",rel:"noopener"},"Open"))); });
-  return h("div",{class:"panel stack",style:"margin-top:16px"}, h("div",{class:"eyebrow"},"For your live classes"), h("h2",null,"Lesson plans (PDF)"), h("p",{class:"muted small"},"One PDF per section with a lesson plan for every class (17 per module). Each plan follows the 3-hour format: a 10-minute warm-up, 30–45 minutes led by you, about two hours on the StratSix day while you circulate, and a 10-minute exit ticket. Days that match an ETS TOEFL iBT® lesson plan say so: teach from your own copy of that plan and use these pages for timing and follow-up. Day N is on page N + 2."), h("div",{class:"sections"}, ...cards));
+  return h("div",{class:"panel stack",style:"margin-top:16px"}, h("div",{class:"eyebrow"},"For your live classes"), h("h2",null,"Lesson plans (PDF)"), h("p",{class:"muted small"},"One PDF per module with a lesson plan for every class (17 per module). Each plan follows the 3-hour format: a 10-minute warm-up, 30–45 minutes led by you, about two hours on the StratSix day while you circulate, and a 10-minute exit ticket. Days that match an ETS TOEFL iBT® lesson plan say so: teach from your own copy of that plan and use these pages for timing and follow-up. Day N is on page N + 2."), h("div",{class:"sections"}, ...cards));
 }
 
 /* ---------------- StratSix: feedback and teacher review ---------------- */
