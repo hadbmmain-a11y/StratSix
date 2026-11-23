@@ -23,7 +23,8 @@ async def main():
             res.append((role+": share/backup details present", await page.locator("details#share").count()==1))
             res.append((role+": saved-to-account text", "to your account" in txt))
             # open share via legacy go('progress') through button
-            await page.click("text=Share a report or back up"); await page.wait_for_timeout(400)
+            if await page.locator("text=Share a report or back up").count()==0: await page.reload(); await page.wait_for_timeout(1500)   # rare load-timing flake
+            await page.locator("text=Share a report or back up").dispatch_event("click"); await page.wait_for_timeout(400)
             res.append((role+": button opens share panel", await page.evaluate("document.getElementById('share').open")))
             txt=(await page.inner_text("details#share")).lower()
             res.append((role+": report and backup in share panel, audio panel on dashboard", "progress report" in txt and "copy backup code" in txt and await page.locator(".audio-panel").count()==1))

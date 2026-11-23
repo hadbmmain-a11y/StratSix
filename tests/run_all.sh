@@ -9,6 +9,7 @@ run python3 tests/test_keys.py
 run python3 tests/test_sync_account.py
 run python3 tests/test_stu.py
 run python3 tests/test_dash.py
+run python3 tests/test_track.py
 run python3 tests/test_gram.py
 run python3 tests/test_w2.py
 for s in reading listening writing writing2 speaking; do run python3 tests/test_sec.py $s; done

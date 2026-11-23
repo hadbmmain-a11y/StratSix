@@ -1,4 +1,18 @@
-<!doctype html><html lang="en"><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style><meta name="theme-color" content="#0B3B3A">
+<!doctype html><html lang="en"><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}.ov-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.ov-tile{border:1px solid var(--line);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:2px;background:var(--paper)}
+.ov-tile b{font-family:var(--f-display);font-size:1.9rem;line-height:1.1}
+.ov-tile.warn{border-color:var(--red)}
+.ov-table td,.ov-table th{padding:6px 8px;text-align:left;vertical-align:middle}
+.linklike{background:none;border:0;padding:0;font:inherit;font-weight:600;color:var(--accent);cursor:pointer;text-decoration:underline;text-align:left}
+.cal{display:grid;grid-auto-flow:column;grid-template-rows:repeat(7,14px);grid-auto-columns:14px;gap:4px;width:max-content}
+.cal-d{display:block;width:14px;height:14px;border-radius:3px;background:var(--line)}
+.cal-d.on{background:var(--accent)}
+.cal-d.fut{opacity:.35}
+.fb-fixes{margin:0;padding-left:18px;display:grid;gap:8px}
+.fx-from{color:var(--err-ink);text-decoration:line-through}
+.fx-to{color:var(--ok);font-weight:600}
+.rec-heard mark{background:var(--hl);padding:0 2px;border-radius:3px}
+</style><meta name="theme-color" content="#0B3B3A">
 <title>StratSix – iBT</title>
 <meta name="description" content="Independent TOEFL iBT® test (2026 format) preparation for B2–C1 students: 85 days in five modules: Reading, Listening, Writing I, Writing II and Speaking, plus a full-length Test Simulator.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -7437,7 +7451,11 @@ function setSync(state, err){
   SYNC.state = state; SYNC.err = err || "";
   try{ const el = document.getElementById("sync-status"); if(el){ el.textContent = syncLabel(); el.className = (state==="error"||state==="offline") ? "sync-bad" : ""; } }catch(e){}
 }
-function progressSummary(){ const sections = {}; SECS.forEach(sec=>{ try{ const st = secStats(sec); sections[sec] = {done:st.done,total:st.total,c:st.c,t:st.t,self:st.self}; }catch(e){} }); return {sections, mocks:Object.keys(S.res||{}).filter(k=>k.endsWith("-summary")).length, last:S.last||null, started:S.started||null}; }
+function ymd(t){ const d = new Date(t); if(isNaN(d)) return null; return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+function activityTimes(){ const out = []; const add = t=>{ if(t) out.push(String(t)); }; for(const k in S.res) add((S.res[k]||{}).at); for(const k in S.days) add((S.days[k]||{}).at); (S.subs||[]).forEach(x=>add(x.at)); return out; }
+function activityDates(){ const set = {}; activityTimes().forEach(t=>{ const y = ymd(t); if(y) set[y] = 1; }); return Object.keys(set).sort(); }
+function lastActivity(){ const a = activityTimes().sort(); return a.length? a[a.length-1] : null; }
+function progressSummary(){ const sections = {}; SECS.forEach(sec=>{ try{ const st = secStats(sec); sections[sec] = {done:st.done,total:st.total,c:st.c,t:st.t,self:st.self}; }catch(e){} }); return {sections, mocks:Object.keys(S.res||{}).filter(k=>k.endsWith("-summary")).length, last:S.last||null, started:S.started||null, types:(function(){ try{ return taskAgg(); }catch(e){ return {}; } })(), lastAct:(function(){ try{ return lastActivity(); }catch(e){ return null; } })(), act:(function(){ try{ return activityDates().slice(-60); }catch(e){ return []; } })()}; }
 function syncSoon(){ if(!SB || !signedIn()) return; clearTimeout(_syncT); _syncT = setTimeout(syncNow, 4000); }
 function syncFail(e){
   const off = (typeof navigator!=="undefined" && navigator.onLine===false) || /Failed to fetch|NetworkError|network/i.test(String((e&&e.message)||e||""));
@@ -8134,6 +8152,7 @@ async function ssPost(payload){
   }
   throw new Error("Unknown request.");
 }
+let FBCOL = true;   /* turns false if the server has no ai_feedback column yet */
 async function ssGet(params){
   const a = params.action;
   if(a==="access"){
@@ -8141,16 +8160,16 @@ async function ssGet(params){
     return {ok:true, cfg: (r && r.data) ? r.data.value : null};
   }
   const user = await sbUser();
-  const cols = "id,created_at,user_id,section,day,task,words,prompt,response_text,ai_result,teacher_score,teacher_note,app,audio_path";
-  const toItem = x=>({row:x.id, time:x.created_at, section:x.section, day:x.day==null? "" : x.day, task:x.task, link:"", words:x.words, ai:x.ai_result||"", transcript:x.response_text||"", tscore:x.teacher_score==null? "" : x.teacher_score, tnote:x.teacher_note||"", mock:/mock/.test(x.app||""), prompt:x.prompt||""});
+  const COLS = "id,created_at,user_id,section,day,task,words,prompt,response_text,ai_result,teacher_score,teacher_note,app,audio_path";
+  const pick = async build=>{ let r = await build(FBCOL? COLS+",ai_feedback" : COLS); if(r.error && FBCOL && /ai_feedback/.test(String(r.error.message||r.error.details||""))){ FBCOL = false; r = await build(COLS); } return r; };
+  const toItem = x=>({fb:x.ai_feedback||null, row:x.id, time:x.created_at, section:x.section, day:x.day==null? "" : x.day, task:x.task, link:"", words:x.words, ai:x.ai_result||"", transcript:x.response_text||"", tscore:x.teacher_score==null? "" : x.teacher_score, tnote:x.teacher_note||"", mock:/mock/.test(x.app||""), prompt:x.prompt||""});
   if(a==="feedback"){
-    const r = await SB.from("submissions").select(cols).eq("user_id", user.id).like("app","StratSix%").order("created_at",{ascending:false}).limit(200);
+    const r = await pick(c=>SB.from("submissions").select(c).eq("user_id", user.id).like("app","StratSix%").order("created_at",{ascending:false}).limit(200));
     if(r.error) throw new Error(sbErr(r.error)); return {ok:true, items:(r.data||[]).map(toItem)};
   }
   if(a==="queue"){
     if(!(S.account && S.account.role==="teacher")) throw new Error("Sign in with the teacher Google account to see the review queue.");
-    let q = SB.from("submissions").select(cols).like("app","StratSix%"); if(!params.all) q = q.is("teacher_score", null);
-    const r = await q.order("created_at",{ascending:false}).limit(300);
+    const r = await pick(c=>{ let q = SB.from("submissions").select(c).like("app","StratSix%"); if(!params.all) q = q.is("teacher_score", null); return q.order("created_at",{ascending:false}).limit(300); });
     if(r.error) throw new Error(sbErr(r.error));
     const rows = r.data||[]; const ids = [...new Set(rows.map(x=>x.user_id))]; const who = {};
     if(ids.length){ const p = await SB.from("profiles").select("id,full_name,email").in("id", ids); (p.data||[]).forEach(x=>{ who[x.id] = x; }); }
@@ -8636,7 +8655,50 @@ function viewStudents(){
     return h("button",{class:"tq-item",type:"button",onclick:()=>{ STU.sel = r; render(); window.scrollTo(0,0); }},
       h("span",null, h("b",null,u.full_name||u.email), h("div",{class:"small muted"}, u.email+(u.role==="teacher"?" · teacher account":""))),
       h("span",{class:"small",style:"text-align:right"}, h("div",null, r.prog? done+"/"+total+" days" : "no progress yet"), h("div",{class:"muted"}, r.subs.length+" submitted"+(r.unscored? " · "+r.unscored+" to score":"")), h("div",{class:"muted"}, fmtWhen(r.last)))); });
-  return h("main",{class:"page"}, top, list.length? h("div",{class:"stack",style:"gap:8px"}, ...list) : h("p",{class:"muted"},"No students have signed in yet."));
+  return h("main",{class:"page"}, top, STU.rows.some(r=>r.p.role!=="teacher")? groupOverview() : null, list.length? h("div",{class:"stack",style:"gap:8px"}, ...list) : h("p",{class:"muted"},"No students have signed in yet."));
+}
+/* ---------------- Teacher: group overview (who is stuck, who waits for a score, where the group struggles) ---------------- */
+const STALL_DAYS = 4;
+function idleDays(iso){ if(!iso) return null; const t = Date.parse(iso); return isNaN(t)? null : Math.max(0, Math.floor((Date.now()-t)/864e5)); }
+function stuStatus(r){
+  const sm = (r.prog && r.prog.summary) || {}; const secs = sm.sections || {};
+  const done = SECS.reduce((a,x)=>a+((secs[x]&&secs[x].done)||0),0), total = SECS.reduce((a,x)=>a+((secs[x]&&secs[x].total)||17),0);
+  const act = sm.lastAct || r.last; const idle = idleDays(act);
+  const finished = SECS.every(x=>secs[x] && secs[x].total && secs[x].done>=secs[x].total);
+  const started = !!r.prog || r.subs.length>0; const joined = idleDays(r.p.created_at);
+  let state = "ok";
+  if(finished) state = "finished";
+  else if(!started) state = (joined!=null && joined>=2)? "notstarted" : "new";
+  else if(idle!=null && idle>=STALL_DAYS) state = "stalled";
+  const pend = r.subs.filter(x=>x.teacher_score==null); const oldest = pend.length? idleDays(pend[pend.length-1].created_at) : null;
+  return {done,total,idle,state,pend:pend.length,oldest,last:sm.last||null,joined};
+}
+function groupOverview(){
+  const rows = STU.rows.filter(r=>r.p.role!=="teacher"); const st = rows.map(r=>({r, s:stuStatus(r)}));
+  const open = r=>{ STU.sel = r; render(); window.scrollTo(0,0); };
+  const attention = st.filter(x=>x.s.state==="stalled" || x.s.state==="notstarted").sort((a,b)=>(b.s.idle==null?b.s.joined:b.s.idle)-(a.s.idle==null?a.s.joined:a.s.idle));
+  const waiting = st.filter(x=>x.s.pend>0).sort((a,b)=>(b.s.oldest||0)-(a.s.oldest||0));
+  const active7 = st.filter(x=>x.s.state!=="notstarted" && x.s.state!=="new" && x.s.idle!=null && x.s.idle<7).length;
+  const tile = (n,label,warn)=>h("div",{class:"ov-tile"+(warn&&n? " warn":"")}, h("b",null,String(n)), h("span",{class:"small muted"},label));
+  const tiles = h("div",{class:"ov-tiles"}, tile(rows.length,"students"), tile(active7,"active in the last 7 days"), tile(attention.length,"need attention (no activity for "+STALL_DAYS+"+ days, or not started)",true), tile(st.reduce((a,x)=>a+x.s.pend,0),"responses waiting for your score",true));
+  const who = x=>h("button",{class:"tq-item",type:"button",onclick:()=>open(x.r)}, h("span",null, h("b",null,x.r.p.full_name||x.r.p.email)));
+  const attRows = attention.slice(0,8).map(x=>{ const why = x.s.state==="notstarted"? "Has not started · joined "+x.s.joined+" day"+(x.s.joined===1?"":"s")+" ago" : "No activity for "+x.s.idle+" days"+(x.s.last? " · last on "+cap(x.s.last.sec)+" Day "+x.s.last.day : "");
+    return h("button",{class:"tq-item",type:"button",onclick:()=>open(x.r)}, h("span",null, h("b",null,x.r.p.full_name||x.r.p.email), h("div",{class:"small muted"},why)), h("span",{class:"small muted"}, x.s.done+"/"+x.s.total+" days")); });
+  const waitRows = waiting.slice(0,8).map(x=>h("button",{class:"tq-item",type:"button",onclick:()=>open(x.r)}, h("span",null, h("b",null,x.r.p.full_name||x.r.p.email), h("div",{class:"small muted"}, x.s.pend+" to score"+(x.s.oldest!=null? " · oldest "+(x.s.oldest===0? "today" : x.s.oldest+" day"+(x.s.oldest===1?"":"s")+" ago") : ""))), h("span",{class:"pill warn"},"Score")));
+  const table = h("div",{class:"tbl-wrap"}, h("table",{class:"format-table ov-table"}, h("thead",null, h("tr",null, h("th",null,"Student"), ...SECS.map(x=>h("th",null,cap(x))))), h("tbody",null, ...st.map(x=>{ const secs = (x.r.prog && x.r.prog.summary && x.r.prog.summary.sections) || {};
+    return h("tr",null, h("td",null, h("button",{class:"linklike",type:"button",onclick:()=>open(x.r)}, x.r.p.full_name||x.r.p.email)), ...SECS.map(sec=>{ const v = secs[sec]; if(!v) return h("td",{class:"small muted"},"–"); return h("td",null, h("div",{class:"small"}, v.done+"/"+v.total), h("div",{class:"meter"}, h("i",{style:"width:"+pct(v.done,v.total||17)+"%"}))); })); }))));
+  const agg = {}; let withData = 0;
+  rows.forEach(r=>{ const ty = r.prog && r.prog.summary && r.prog.summary.types; if(!ty || !Object.keys(ty).length) return; withData++; for(const k in ty){ const v = ty[k]; if(!v || !v.t) continue; agg[k] = agg[k]||{c:0,t:0,n:0}; agg[k].c += v.c; agg[k].t += v.t; agg[k].n++; } });
+  const ranked = Object.keys(agg).filter(k=>agg[k].t>=10).sort((a,b)=>pct(agg[a].c,agg[a].t)-pct(agg[b].c,agg[b].t));
+  const errs = ranked.length? h("div",{class:"bars"}, ...ranked.map(k=>h("div",{class:"bar-row"}, h("span",null,TT[k]||k), h("div",{class:"meter"+(pct(agg[k].c,agg[k].t)<60?" red":"")}, h("i",{style:"width:"+pct(agg[k].c,agg[k].t)+"%"})), h("span",{class:"v"}, pct(agg[k].c,agg[k].t)+"%")), ))
+    : h("p",{class:"small muted"}, withData? "Not enough answers yet. A task type appears here after the group has answered at least 10 questions of that type." : "No accuracy data yet. It appears after students check answers in practice tasks and their progress syncs.");
+  return h("section",{class:"stack",style:"gap:16px;margin-bottom:20px","aria-label":"Group overview"},
+    h("div",{class:"stack"}, h("div",{class:"eyebrow"},"Group overview"), tiles),
+    h("div",{class:"two"},
+      h("div",{class:"panel stack"}, h("h2",null,"Needs attention"), attRows.length? h("div",{class:"stack",style:"gap:8px"}, ...attRows) : h("p",{class:"small muted"},"Nobody is stalled right now."), attention.length>8? h("div",{class:"small muted"},"And "+(attention.length-8)+" more in the table below.") : null),
+      h("div",{class:"panel stack"}, h("h2",null,"Waiting for your score"), waitRows.length? h("div",{class:"stack",style:"gap:8px"}, ...waitRows) : h("p",{class:"small muted"},"No responses are waiting."), h("div",{class:"small muted"},"Score them in Teacher guide → Review queue."))),
+    h("div",{class:"panel stack"}, h("h2",null,"Where the group struggles"), errs, h("div",{class:"small muted"},"Accuracy of auto-scored tasks across "+withData+" student"+(withData===1?"":"s")+" with synced data. Red bars are under 60%. Use them to choose what to reteach.")),
+    h("div",{class:"panel stack"}, h("h2",null,"Module progress"), table));
 }
 function navBar(){
   const items = [["home","Dashboard"],["reading","Reading"],["listening","Listening"],["writing","Writing I"],["writing2","Writing II"],["speaking","Speaking"],["sim","Test Simulator"],["guides","Guides"],...((S.account&&S.account.role==="teacher")? [["students","Students"]] : []),["teacher","Teacher guide"]];
@@ -8769,7 +8831,7 @@ function viewHome(){
   const fmtT = h("div",{class:"panel stack"}, h("div",{class:"eyebrow"},"The test at a glance"), h("h2",null,"12 task types, about 90 minutes"), h("div",{class:"tbl-wrap"}, h("table",{class:"format-table"}, h("thead",null,h("tr",null,h("th",null,"Section"),h("th",null,"Task"),h("th",null,"What you do"))), h("tbody",null, ...BS.format.map(r=>h("tr",null, h("td",{class:"sec"},r[0]), h("td",null,r[1]), h("td",{class:"muted"},r[2])))))), h("div",{class:"small muted"},"Reading and Listening are adaptive: your Module 1 result decides whether Module 2 is harder or easier. Writing and Speaking are fixed."));
   const week = h("div",{class:"panel stack"}, h("div",{class:"eyebrow"},"How to use StratSix"), h("h2",null,"Your study routine"), h("ol",{class:"steps"}, ...BS.routine.map(r=>h("li",null,h("div",null,h("b",null,r[0]),h("span",null,r[1]))))));
   const P = progressPanels();
-  const results = h("section",{id:"results",class:"stack",style:"margin-top:16px"}, h("div",{class:"eyebrow"},"Your results"), h("h2",null,"How you are doing"), P.accuracy);
+  const results = h("section",{id:"results",class:"stack",style:"margin-top:16px"}, h("div",{class:"eyebrow"},"Your results"), h("h2",null,"How you are doing"), P.accuracy, P.trend);
   const more = h("details",{id:"share",class:"panel",style:"margin-top:16px"}, h("summary",{class:"q",style:"cursor:pointer"},"Share a report and back up"), h("div",{class:"stack",style:"margin-top:12px"}, P.send, P.backup));
   return h("main",{class:"page"}, hero, cards, feedbackBlock(), audioPanel(), results, accessPanel(), h("div",{class:"two",style:"margin-top:16px"}, fmtT, week), more);
 }
@@ -8974,6 +9036,44 @@ async function offerDownload(filename, data){
 }
 async function copyText(txt, fallbackEl, msg){ try{ await navigator.clipboard.writeText(txt); toast(msg || "Copied. Paste it into WhatsApp or an email to your teacher."); }catch(e){ if(fallbackEl){ fallbackEl.hidden=false; fallbackEl.focus(); fallbackEl.select(); } toast("Select the text below and copy it."); } }
 
+/* ---------- progress over time: practice calendar, score trend, what to review ---------- */
+function ensureFB(cb){ if(!signedIn()) return; if(FB.items && Date.now()-FB.t<30000) return; ssGet({action:"feedback"}).then(j=>{ FB.items = j.items||[]; FB.t = Date.now(); if(cb) cb(); }).catch(()=>{}); }
+function calGrid(){
+  const days = new Set(activityDates()); const today = new Date(); today.setHours(0,0,0,0);
+  const dow = (today.getDay()+6)%7; const start = new Date(today); start.setDate(today.getDate()-dow-49);
+  const cells = []; let n = 0;
+  for(let i=0;i<56;i++){ const d = new Date(start); d.setDate(start.getDate()+i); const key = ymd(d); const fut = d>today; const on = days.has(key); if(on && !fut) n++;
+    cells.push(h("i",{class:"cal-d"+(on?" on":"")+(fut?" fut":""), title:key+(on? " · practised" : "")})); }
+  let streak = 0; const c = new Date(today); if(!days.has(ymd(c))) c.setDate(c.getDate()-1); while(days.has(ymd(c))){ streak++; c.setDate(c.getDate()-1); }
+  return {grid:h("div",{class:"cal",role:"img","aria-label":"Practice calendar for the last 8 weeks. You practised on "+n+" days."}, ...cells), n, streak};
+}
+function trendSVG(items){
+  const pts = items.slice().reverse().map(it=>{ const ai = aiParse(it.ai); const a = ai && !ai.err && ai.score!=null && ai.score!=="" && !/\//.test(ai.score)? Number(ai.score) : null; const t = it.tscore!==""&&it.tscore!=null? Number(it.tscore) : null; return {a: isNaN(a)? null : a, t: isNaN(t)? null : t}; }).filter(p=>p.a!=null || p.t!=null);
+  if(pts.length<2) return null;
+  const W = 520, H = 170, L = 28, R = 10, T = 10, B = 22, n = pts.length; const x = i=>L+(n===1?0:i*(W-L-R)/(n-1)), y = v=>T+(5-v)*(H-T-B)/5;
+  let g = ""; for(let v=0; v<=5; v++) g += '<line x1="'+L+'" x2="'+(W-R)+'" y1="'+y(v)+'" y2="'+y(v)+'" stroke="var(--line)"/><text x="'+(L-6)+'" y="'+(y(v)+4)+'" text-anchor="end" font-size="10" fill="var(--muted,#667)">'+v+'</text>';
+  const line = (k,col)=>{ const q = pts.map((p,i)=>p[k]==null? null : [x(i),y(p[k])]).filter(Boolean); if(!q.length) return ""; return '<polyline fill="none" stroke="'+col+'" stroke-width="2" points="'+q.map(a=>a[0].toFixed(1)+","+a[1].toFixed(1)).join(" ")+'"/>' + q.map(a=> k==="a"? '<circle cx="'+a[0].toFixed(1)+'" cy="'+a[1].toFixed(1)+'" r="4" fill="'+col+'"/>' : '<rect x="'+(a[0]-4).toFixed(1)+'" y="'+(a[1]-4).toFixed(1)+'" width="8" height="8" fill="'+col+'"/>').join(""); };
+  const svg = '<svg viewBox="0 0 '+W+' '+H+'" width="100%" role="img" aria-label="Your scores over time, from 0 to 5. '+pts.length+' scored responses.">'+g+line("a","var(--accent)")+line("t","var(--red)")+'</svg>';
+  return h("div",{html:svg});
+}
+function progressTrend(){
+  const box = h("div",{class:"stack",style:"gap:14px"});
+  function draw(){
+    box.innerHTML = "";
+    const cal = calGrid();
+    box.append(h("div",{class:"stack",style:"gap:6px"}, h("b",null,"Practice calendar · last 8 weeks"), cal.grid, h("div",{class:"small muted"}, cal.n? "You practised on "+cal.n+" of the last 56 days"+(cal.streak>1? " · current streak "+cal.streak+" days." : ".") : "Your practice days appear here as you complete activities.")));
+    const items = (FB.items||[]).filter(it=>!it.mock); const svg = signedIn()? trendSVG(items) : null;
+    box.append(h("div",{class:"stack",style:"gap:6px"}, h("b",null,"Scores on speaking and writing"),
+      svg || h("p",{class:"small muted"}, signedIn()? (FB.items? "After two scored responses, your trend appears here." : "Loading your scores…") : "Sign in with Google to see your scores over time."),
+      svg? h("div",{class:"small muted"},"● Claude (AI) estimate · ■ Your teacher. Scale 0–5. These are practice scores, not TOEFL bands.") : null));
+    const agg = taskAgg(); const weak = Object.keys(agg).filter(k=>agg[k].t>=6 && pct(agg[k].c,agg[k].t)<70).sort((a,b)=>pct(agg[a].c,agg[a].t)-pct(agg[b].c,agg[b].t)).slice(0,3);
+    const any = Object.keys(agg).some(k=>agg[k].t>=6);
+    box.append(h("div",{class:"stack",style:"gap:6px"}, h("b",null,"Review these first"),
+      weak.length? h("ul",{class:"fb-fixes"}, ...weak.map(k=>h("li",null, h("b",null,TT[k]||k), " · "+pct(agg[k].c,agg[k].t)+"% ("+agg[k].c+" of "+agg[k].t+" correct)"))) : h("p",{class:"small muted"}, any? "No weak spots under 70% right now. Keep going." : "After about 6 answers in a task type, your weakest types appear here.")));
+  }
+  draw(); ensureFB(draw);
+  return h("div",{class:"panel stack"}, h("div",{class:"eyebrow"},"Over time"), h("h2",null,"Your progress"), box);
+}
 function progressPanels(){
   const agg = taskAgg();
   const bars = h("div",{class:"bars"}, ...Object.keys(TT).filter(k=>agg[k]).map(k=>h("div",{class:"bar-row"}, h("span",null,TT[k]), h("div",{class:"meter"+(pct(agg[k].c,agg[k].t)<60?" red":"")}, h("i",{style:"width:"+pct(agg[k].c,agg[k].t)+"%"})), h("span",{class:"v"}, pct(agg[k].c,agg[k].t)+"%"))));
@@ -8988,7 +9088,7 @@ function progressPanels(){
     h("div",{class:"row"}, h("button",{class:"btn",onclick:()=>copyText(btoa(unescape(encodeURIComponent(JSON.stringify(S)))), null)},"Copy backup code"), h("button",{class:"btn",onclick:()=>offerDownload("StratSix-backup.json", JSON.stringify(S))},"Download backup")),
     code, h("div",{class:"row"}, h("button",{class:"btn",onclick:()=>{ try{ const txt = code.value.trim(); const obj = JSON.parse(txt.startsWith("{")? txt : decodeURIComponent(escape(atob(txt)))); if(!obj.days) throw 0; S = Object.assign(S,obj); save(); toast("Progress restored."); render(); }catch(e){ toast("That code is not a StratSix backup. Copy it again and paste the whole code."); } }},"Restore progress")));
   const accuracy = h("div",{class:"panel stack"}, h("div",{class:"eyebrow"},"Auto-scored tasks"), h("h2",null,"Accuracy by task type"), empty? h("p",{class:"muted"},"Nothing scored yet. Your results appear here after you check answers in any practice task.") : bars, h("p",{class:"small muted"},"Red bars are under 60%. Review the strategy day for that task before your next mock."));
-  return {accuracy, send, backup};
+  return {accuracy, send, backup, trend:progressTrend()};
 }
 function voiceRow(label, key, role){
   TTS.load();
@@ -9037,6 +9137,27 @@ function aiParse(t){ t = String(t||""); if(!t) return null; if(t[0]==="✗") ret
   const m = t.match(/AI\s*([0-5](?:\.\d)?)\s*\/\s*5/i), b = t.match(/Band\s*≈?\s*([1-6](?:\.5)?)/i), l = t.match(/https?:\/\/\S+/);
   if(t.indexOf("·")>-1 && !m){ const avgs = [...t.matchAll(/(?:Email|Discussion)\s*([0-5](?:\.\d)?)/g)].map(x=>x[1]); if(avgs.length) return {score:avgs.join(" / "), band:null, link:l&&l[0]}; }
   return {score:m&&m[1], band:b&&b[1], link:l&&l[0]}; }
+function retryTarget(it){
+  if(it.mock) return {name:"sim"};
+  const sec = it.section==="Speaking"? "speaking" : (/^\[Writing II\b/.test(it.prompt||"")? "writing2" : "writing"); const day = parseInt(it.day,10);
+  return {name:"sec", sec, day:(day>=1 && day<=17)? day : lastDay(sec)};
+}
+function markFixes(text, fixes){
+  const spans = [], low = String(text).toLowerCase();
+  (fixes||[]).forEach(f=>{ const x = String((f&&f.from)||"").trim(); if(x.length<2) return; const i = low.indexOf(x.toLowerCase()); if(i>=0) spans.push([i,i+x.length]); });
+  spans.sort((a,b)=>a[0]-b[0]); const out = []; let p = 0;
+  spans.forEach(([a,b])=>{ if(a<p) return; out.push(String(text).slice(p,a)); out.push(h("mark",null,String(text).slice(a,b))); p = b; });
+  out.push(String(text).slice(p)); return out;
+}
+function fbDetail(it){
+  const fb = it.fb; if(!fb || typeof fb!=="object") return null; const parts = [];
+  const cr = Array.isArray(fb.criteria)? fb.criteria.filter(c=>c && c.label && c.score!=null && !isNaN(Number(c.score))) : [];
+  if(cr.length) parts.push(h("div",{class:"stack",style:"gap:6px"}, h("b",{class:"small"},"What affected your score"), h("div",{class:"bars"}, ...cr.map(c=>{ const v = Math.max(0,Math.min(5,Number(c.score))); return h("div",{class:"stack",style:"gap:2px"}, h("div",{class:"bar-row"}, h("span",null,String(c.label)), h("div",{class:"meter"+(v<3?" red":"")}, h("i",{style:"width:"+(v*20)+"%"})), h("span",{class:"v"}, v+"/5")), c.note? h("div",{class:"small muted"}, String(c.note)) : null); }))));
+  const fx = Array.isArray(fb.fixes)? fb.fixes.filter(f=>f && f.from && f.to) : [];
+  if(fx.length) parts.push(h("div",{class:"stack",style:"gap:6px"}, h("b",{class:"small"},"Fix these"), h("ul",{class:"fb-fixes"}, ...fx.slice(0,6).map(f=>h("li",null, h("span",{class:"fx-from"}, String(f.from)), " → ", h("span",{class:"fx-to"}, String(f.to)), f.why? h("div",{class:"small muted"}, String(f.why)) : null)))));
+  if(fb.next) parts.push(h("div",{class:"why small"}, h("b",null,"Next time: "), String(fb.next)));
+  return parts.length? h("div",{class:"stack fb-detail",style:"gap:10px"}, ...parts) : null;
+}
 function fbCard(it){
   const ai = aiParse(it.ai);
   const aiBox = ai && !ai.err ? h("div",{class:"fb-score ai"}, h("div",{class:"small"},"AI estimate"), h("div",{class:"big"}, (ai.score||"–")+(ai.score&&ai.score.indexOf("/")<0?" / 5":"")), ai.band? h("div",{class:"small"},"≈ Band "+ai.band) : null, ai.link? h("a",{href:ai.link,target:"_blank",rel:"noopener",style:"color:#fff;font-weight:600"},"Open the full report") : null)
@@ -9046,7 +9167,9 @@ function fbCard(it){
   return h("div",{class:"fb-card"},
     h("div",{class:"row",style:"justify-content:space-between"}, h("div",null, h("div",{class:"eyebrow"}, it.section+(it.day? " · Day "+it.day : "")+" · "+new Date(it.time).toLocaleDateString()), h("h3",null, it.task)), it.link? h("a",{class:"btn sm",href:it.link,target:"_blank",rel:"noopener"}, it.section==="Speaking"? "My recording" : "My portfolio") : null),
     h("div",{class:"fb-scores"}, aiBox, tBox),
-    it.transcript? h("details",{class:"small"}, h("summary",{style:"cursor:pointer"},"What we heard"), h("div",{class:"rec-heard",style:"margin-top:6px"}, it.transcript)) : null,
+    fbDetail(it),
+    it.transcript? h("details",{class:"small",open:(it.fb&&Array.isArray(it.fb.fixes)&&it.fb.fixes.length)?true:null}, h("summary",{style:"cursor:pointer"}, it.section==="Speaking"? "What we heard" : "Your response"), h("div",{class:"rec-heard",style:"margin-top:6px"}, ...markFixes(it.transcript, it.fb&&it.fb.fixes))) : null,
+    h("div",{class:"row",style:"gap:8px;flex-wrap:wrap"}, h("button",{class:"btn primary sm",type:"button",onclick:()=>go(retryTarget(it))}, it.mock? "Open the Test Simulator" : "Try again")),
     h("div",{class:"small muted"},"AI scores are practice estimates, not official TOEFL scores. Your teacher's score is the reference."));
 }
 const FB = {items:null, t:0};
