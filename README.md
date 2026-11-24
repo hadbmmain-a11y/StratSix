@@ -25,3 +25,7 @@ Needs Python 3, Playwright (`pip install playwright`) and Google Chrome. It chec
 ## Content sources
 
 `tools/` holds the scripts that generated the grammar clinics, the 24 grammar tutorials and the lesson-plan PDFs. They are kept for reference and rebuilding; see `tools/README.md`.
+
+## Typing Check (Writing I and II)
+Every Writing day (34 in total) has a required "Typing Check" placed right before the daily homework. Part 1 copies a text (60, 90 or 120 seconds) and is scored in net words per minute with edit-distance accuracy. Part 2 is free writing that grows from 1 to 10 minutes over the 34 days. Pasting is blocked. The goal line is 60+ words per minute with no upper limit; finishing both parts is what completes the day. Results go to the student's chart and, through the progress summary, to the teacher overview (copy and write speed, flag under 25 after 3 checks).
+Source: `tools/typecheck/typecheck_patch.js` (spliced between `TYPECHECK_PATCH_START/END` in `index.html`). Tests: `tests/test_typing.py`.

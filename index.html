@@ -7455,7 +7455,7 @@ function ymd(t){ const d = new Date(t); if(isNaN(d)) return null; return d.getFu
 function activityTimes(){ const out = []; const add = t=>{ if(t) out.push(String(t)); }; for(const k in S.res) add((S.res[k]||{}).at); for(const k in S.days) add((S.days[k]||{}).at); (S.subs||[]).forEach(x=>add(x.at)); return out; }
 function activityDates(){ const set = {}; activityTimes().forEach(t=>{ const y = ymd(t); if(y) set[y] = 1; }); return Object.keys(set).sort(); }
 function lastActivity(){ const a = activityTimes().sort(); return a.length? a[a.length-1] : null; }
-function progressSummary(){ const sections = {}; SECS.forEach(sec=>{ try{ const st = secStats(sec); sections[sec] = {done:st.done,total:st.total,c:st.c,t:st.t,self:st.self}; }catch(e){} }); return {sections, mocks:Object.keys(S.res||{}).filter(k=>k.endsWith("-summary")).length, last:S.last||null, started:S.started||null, types:(function(){ try{ return taskAgg(); }catch(e){ return {}; } })(), lastAct:(function(){ try{ return lastActivity(); }catch(e){ return null; } })(), act:(function(){ try{ return activityDates().slice(-60); }catch(e){ return []; } })()}; }
+function progressSummary(){ const sections = {}; SECS.forEach(sec=>{ try{ const st = secStats(sec); sections[sec] = {done:st.done,total:st.total,c:st.c,t:st.t,self:st.self}; }catch(e){} }); return {sections, mocks:Object.keys(S.res||{}).filter(k=>k.endsWith("-summary")).length, last:S.last||null, started:S.started||null, types:(function(){ try{ return taskAgg(); }catch(e){ return {}; } })(), lastAct:(function(){ try{ return lastActivity(); }catch(e){ return null; } })(), typing:(function(){ try{ return typingSeries().slice(-40).map(x=>({d:ymd(x.at),c:x.c,w:x.w,a:x.a,v:x.dev})); }catch(e){ return []; } })(), act:(function(){ try{ return activityDates().slice(-60); }catch(e){ return []; } })()}; }
 function syncSoon(){ if(!SB || !signedIn()) return; clearTimeout(_syncT); _syncT = setTimeout(syncNow, 4000); }
 function syncFail(e){
   const off = (typeof navigator!=="undefined" && navigator.onLine===false) || /Failed to fetch|NetworkError|network/i.test(String((e&&e.message)||e||""));
@@ -7587,6 +7587,7 @@ function brandMark(){ const m = h("span",{class:"brand-mark","aria-hidden":"true
 let TIMERS = [];
 function clearTimers(){ TIMERS.forEach(clearInterval); TIMERS=[]; TTS.stop(); }
 function countdown(el, secs, onDone, lowAt){
+  if(window.__BS_ENABLE_TEST && window.__BS_COUNTDOWN) return window.__BS_COUNTDOWN(el, secs, onDone, lowAt);   /* test seam: only when a test enables it */
   let left = secs; el.textContent = fmt(left); el.classList.remove("low");
   const id = setInterval(()=>{ left--; el.textContent = fmt(left); if(left <= (lowAt||30)) el.classList.add("low"); if(left<=0){ clearInterval(id); onDone && onDone(); } },1000);
   TIMERS.push(id);
@@ -8671,7 +8672,8 @@ function stuStatus(r){
   else if(!started) state = (joined!=null && joined>=2)? "notstarted" : "new";
   else if(idle!=null && idle>=STALL_DAYS) state = "stalled";
   const pend = r.subs.filter(x=>x.teacher_score==null); const oldest = pend.length? idleDays(pend[pend.length-1].created_at) : null;
-  return {done,total,idle,state,pend:pend.length,oldest,last:sm.last||null,joined};
+  const ty = Array.isArray(sm.typing)? sm.typing : []; const tl = ty[ty.length-1] || null;
+  return {done,total,idle,state,pend:pend.length,oldest,last:sm.last||null,joined,ty,typeLow: !!(tl && ty.length>=3 && tl.c<25)};
 }
 function groupOverview(){
   const rows = STU.rows.filter(r=>r.p.role!=="teacher"); const st = rows.map(r=>({r, s:stuStatus(r)}));
@@ -8684,9 +8686,10 @@ function groupOverview(){
   const who = x=>h("button",{class:"tq-item",type:"button",onclick:()=>open(x.r)}, h("span",null, h("b",null,x.r.p.full_name||x.r.p.email)));
   const attRows = attention.slice(0,8).map(x=>{ const why = x.s.state==="notstarted"? "Has not started · joined "+x.s.joined+" day"+(x.s.joined===1?"":"s")+" ago" : "No activity for "+x.s.idle+" days"+(x.s.last? " · last on "+cap(x.s.last.sec)+" Day "+x.s.last.day : "");
     return h("button",{class:"tq-item",type:"button",onclick:()=>open(x.r)}, h("span",null, h("b",null,x.r.p.full_name||x.r.p.email), h("div",{class:"small muted"},why)), h("span",{class:"small muted"}, x.s.done+"/"+x.s.total+" days")); });
+  const lowType = st.filter(x=>x.s.typeLow && !attention.includes(x)); const lowRows = lowType.slice(0,6).map(x=>{ const t = x.s.ty[x.s.ty.length-1]; return h("button",{class:"tq-item",type:"button",onclick:()=>open(x.r)}, h("span",null, h("b",null,x.r.p.full_name||x.r.p.email), h("div",{class:"small muted"},"Typing: "+t.c+" words/min copying after "+x.s.ty.length+" checks (goal "+TC_GOAL+"+)")), h("span",{class:"pill warn"},"Typing")); });
   const waitRows = waiting.slice(0,8).map(x=>h("button",{class:"tq-item",type:"button",onclick:()=>open(x.r)}, h("span",null, h("b",null,x.r.p.full_name||x.r.p.email), h("div",{class:"small muted"}, x.s.pend+" to score"+(x.s.oldest!=null? " · oldest "+(x.s.oldest===0? "today" : x.s.oldest+" day"+(x.s.oldest===1?"":"s")+" ago") : ""))), h("span",{class:"pill warn"},"Score")));
-  const table = h("div",{class:"tbl-wrap"}, h("table",{class:"format-table ov-table"}, h("thead",null, h("tr",null, h("th",null,"Student"), ...SECS.map(x=>h("th",null,cap(x))))), h("tbody",null, ...st.map(x=>{ const secs = (x.r.prog && x.r.prog.summary && x.r.prog.summary.sections) || {};
-    return h("tr",null, h("td",null, h("button",{class:"linklike",type:"button",onclick:()=>open(x.r)}, x.r.p.full_name||x.r.p.email)), ...SECS.map(sec=>{ const v = secs[sec]; if(!v) return h("td",{class:"small muted"},"–"); return h("td",null, h("div",{class:"small"}, v.done+"/"+v.total), h("div",{class:"meter"}, h("i",{style:"width:"+pct(v.done,v.total||17)+"%"}))); })); }))));
+  const table = h("div",{class:"tbl-wrap"}, h("table",{class:"format-table ov-table"}, h("thead",null, h("tr",null, h("th",null,"Student"), ...SECS.map(x=>h("th",null,cap(x))), h("th",null,"Typing (copy · write)"))), h("tbody",null, ...st.map(x=>{ const secs = (x.r.prog && x.r.prog.summary && x.r.prog.summary.sections) || {};
+    return h("tr",null, h("td",null, h("button",{class:"linklike",type:"button",onclick:()=>open(x.r)}, x.r.p.full_name||x.r.p.email)), ...SECS.map(sec=>{ const v = secs[sec]; if(!v) return h("td",{class:"small muted"},"–"); return h("td",null, h("div",{class:"small"}, v.done+"/"+v.total), h("div",{class:"meter"}, h("i",{style:"width:"+pct(v.done,v.total||17)+"%"}))); }), (function(){ const t = x.s.ty[x.s.ty.length-1]; return t? h("td",null, h("div",{class:"small"}, t.c+" · "+(t.w!=null? t.w : "–")), h("div",{class:"small muted"}, x.s.ty.length+" check"+(x.s.ty.length===1?"":"s")+(t.v==="touch"? " · phone":""))) : h("td",{class:"small muted"},"–"); })()); }))));
   const agg = {}; let withData = 0;
   rows.forEach(r=>{ const ty = r.prog && r.prog.summary && r.prog.summary.types; if(!ty || !Object.keys(ty).length) return; withData++; for(const k in ty){ const v = ty[k]; if(!v || !v.t) continue; agg[k] = agg[k]||{c:0,t:0,n:0}; agg[k].c += v.c; agg[k].t += v.t; agg[k].n++; } });
   const ranked = Object.keys(agg).filter(k=>agg[k].t>=10).sort((a,b)=>pct(agg[a].c,agg[a].t)-pct(agg[b].c,agg[b].t));
@@ -8695,7 +8698,7 @@ function groupOverview(){
   return h("section",{class:"stack",style:"gap:16px;margin-bottom:20px","aria-label":"Group overview"},
     h("div",{class:"stack"}, h("div",{class:"eyebrow"},"Group overview"), tiles),
     h("div",{class:"two"},
-      h("div",{class:"panel stack"}, h("h2",null,"Needs attention"), attRows.length? h("div",{class:"stack",style:"gap:8px"}, ...attRows) : h("p",{class:"small muted"},"Nobody is stalled right now."), attention.length>8? h("div",{class:"small muted"},"And "+(attention.length-8)+" more in the table below.") : null),
+      h("div",{class:"panel stack"}, h("h2",null,"Needs attention"), (attRows.length||lowRows.length)? h("div",{class:"stack",style:"gap:8px"}, ...attRows, ...lowRows) : h("p",{class:"small muted"},"Nobody is stalled right now."), attention.length>8? h("div",{class:"small muted"},"And "+(attention.length-8)+" more in the table below.") : null),
       h("div",{class:"panel stack"}, h("h2",null,"Waiting for your score"), waitRows.length? h("div",{class:"stack",style:"gap:8px"}, ...waitRows) : h("p",{class:"small muted"},"No responses are waiting."), h("div",{class:"small muted"},"Score them in Teacher guide → Review queue."))),
     h("div",{class:"panel stack"}, h("h2",null,"Where the group struggles"), errs, h("div",{class:"small muted"},"Accuracy of auto-scored tasks across "+withData+" student"+(withData===1?"":"s")+" with synced data. Red bars are under 60%. Use them to choose what to reteach.")),
     h("div",{class:"panel stack"}, h("h2",null,"Module progress"), table));
@@ -8864,6 +8867,7 @@ function dayReqs(sec, day){
       case "interview": ok = rubricDone(w.rubric, "interview"); break;
       case "repeat": { const m = w.marks||[]; ok = b.items.every((_,i)=>m[i]!=null); break; }
       case "typing": ok = w.wpm!=null; break;
+      case "typecheck": ok = !!(w.copy && w.comp); break;
       case "tutorial": ok = !!S.tut[b.id]; break;
       case "etsself": ok = !!(w.lr && w.iv && w.lr.length && w.lr.every(x=>x!=null) && w.iv.every(x=>x!=null)); break;
       case "analyzer": ok = words(w.transcript||"")>=10; break;
@@ -9056,6 +9060,16 @@ function trendSVG(items){
   const svg = '<svg viewBox="0 0 '+W+' '+H+'" width="100%" role="img" aria-label="Your scores over time, from 0 to 5. '+pts.length+' scored responses.">'+g+line("a","var(--accent)")+line("t","var(--red)")+'</svg>';
   return h("div",{html:svg});
 }
+function typingSVG(ser){
+  if(ser.length<2) return null; const W = 520, H = 170, L = 30, R = 10, T = 10, B = 22, n = ser.length;
+  const mx = Math.max(TC_GOAL, ...ser.map(p=>Math.max(p.c||0, p.w||0))); const top = Math.ceil((mx+10)/10)*10;
+  const x = i=>L+i*(W-L-R)/(n-1), y = v=>T+(top-v)*(H-T-B)/top; let g = "";
+  for(let v=0; v<=top; v+=20) g += '<line x1="'+L+'" x2="'+(W-R)+'" y1="'+y(v)+'" y2="'+y(v)+'" stroke="var(--line)"/><text x="'+(L-6)+'" y="'+(y(v)+4)+'" text-anchor="end" font-size="10" fill="var(--muted,#667)">'+v+'</text>';
+  g += '<line x1="'+L+'" x2="'+(W-R)+'" y1="'+y(TC_GOAL)+'" y2="'+y(TC_GOAL)+'" stroke="var(--red)" stroke-dasharray="5 4"/>';
+  const line = (k,col,sq)=>{ const q = ser.map((p,i)=>p[k]==null? null : [x(i),y(p[k])]).filter(Boolean); if(!q.length) return ""; return '<polyline fill="none" stroke="'+col+'" stroke-width="2" points="'+q.map(a=>a[0].toFixed(1)+","+a[1].toFixed(1)).join(" ")+'"/>' + q.map(a=> sq? '<rect x="'+(a[0]-4).toFixed(1)+'" y="'+(a[1]-4).toFixed(1)+'" width="8" height="8" fill="'+col+'"/>' : '<circle cx="'+a[0].toFixed(1)+'" cy="'+a[1].toFixed(1)+'" r="4" fill="'+col+'"/>').join(""); };
+  const last = ser[n-1];
+  return h("div",{html:'<svg viewBox="0 0 '+W+' '+H+'" width="100%" role="img" aria-label="Typing speed over '+n+' checks. Latest copying speed '+last.c+' words per minute. Goal '+TC_GOAL+'.">'+g+line("c","var(--accent)",false)+line("w","var(--amber,#b8860b)",true)+'</svg>'});
+}
 function progressTrend(){
   const box = h("div",{class:"stack",style:"gap:14px"});
   function draw(){
@@ -9066,6 +9080,10 @@ function progressTrend(){
     box.append(h("div",{class:"stack",style:"gap:6px"}, h("b",null,"Scores on speaking and writing"),
       svg || h("p",{class:"small muted"}, signedIn()? (FB.items? "After two scored responses, your trend appears here." : "Loading your scores…") : "Sign in with Google to see your scores over time."),
       svg? h("div",{class:"small muted"},"● Claude (AI) estimate · ■ Your teacher. Scale 0–5. These are practice scores, not TOEFL bands.") : null));
+    const ser = typingSeries(); const tsvg = typingSVG(ser); const lastT = ser[ser.length-1];
+    box.append(h("div",{class:"stack",style:"gap:6px"}, h("b",null,"Typing speed"),
+      tsvg || h("p",{class:"small muted"}, lastT? "Your first result is "+lastT.c+" words per minute copying. Your chart appears after your second Typing Check." : "Your Typing Check results appear here from Writing I, Day 1."),
+      tsvg? h("div",{class:"small muted"},"● Copying · ■ Your own writing · dashed line = goal of "+TC_GOAL+"+ words per minute (no upper limit).") : null));
     const agg = taskAgg(); const weak = Object.keys(agg).filter(k=>agg[k].t>=6 && pct(agg[k].c,agg[k].t)<70).sort((a,b)=>pct(agg[a].c,agg[a].t)-pct(agg[b].c,agg[b].t)).slice(0,3);
     const any = Object.keys(agg).some(k=>agg[k].t>=6);
     box.append(h("div",{class:"stack",style:"gap:6px"}, h("b",null,"Review these first"),
@@ -10623,6 +10641,173 @@ function __speakingPatch(){ const P = {"7":{"blocks":{"2.0":{"html":"<p>Press st
 }
 __speakingPatch();
 /*SPEAKING_PATCH_END*/
+/*TYPECHECK_PATCH_START*/
+/* Daily Typing Check for Writing I and II (34 days): copy phase + free-writing phase that grows from 1 to 10 minutes.
+   Placed before the daily homework. Goal line: 60+ words per minute, no upper limit. Completing it is required, reaching 60 is not.
+   Replaces the older one-off typing tests so no day has two. Source copy: tools/typecheck/typecheck_patch.js */
+const TC_GOAL = 60;
+const TC_TEXTS = [
+"Dear Professor Martinez, I am writing to ask for a short extension on the research paper that is due on Friday. Last week I was ill and could not attend two classes or work in the library. I have already finished the outline and about half of the first draft. If possible, I would like to submit the final version on Tuesday instead. I understand that deadlines are important, and I will make sure that the paper is complete and carefully edited. Thank you very much for considering my request. I would be happy to meet with you during your office hours to discuss my progress. Sincerely, Daniela Rojas",
+"The university library will extend its opening hours during the final exam period. Starting next Monday, students will be able to study there until midnight on weekdays and until ten in the evening on weekends. Quiet rooms can be reserved online for up to two hours at a time, and a limited number of laptops will be available at the front desk. Library staff encourage students to arrive early, because the most popular study areas fill up quickly. Anyone who needs help finding sources for a paper can book a short appointment with a librarian. These changes are meant to give everyone a calm and productive place to prepare.",
+"Many people believe that online courses will soon replace traditional classrooms. However, research suggests that the situation is more complicated. Online lessons give students flexibility, since they can study at any time and repeat difficult explanations as often as they need. On the other hand, face-to-face classes offer immediate feedback and encourage students to take part in discussions. For this reason, a growing number of universities combine both methods. Students watch short lectures at home and then use class time to solve problems with their classmates and their teacher. In my opinion, this approach takes the best features of each format and helps students stay motivated.",
+"Group projects are common in university courses, and they can be both rewarding and frustrating. When team members share the work fairly, a group can produce a better result than any single student. Different people bring different ideas, and discussing them often leads to stronger solutions. Problems appear when one person does most of the work or when nobody takes responsibility for the schedule. To avoid this, teams should divide tasks clearly, set deadlines for each part and meet regularly to check their progress. Professors can also help by asking each student to describe their contribution. With good communication and a little patience, a group project becomes valuable practice for working life.",
+"Dear Ms. Alvarez, I live in apartment 4B, and I am writing about a problem with the heating in my room. For the past week the radiator has made a loud noise at night, and the room is still cold in the morning. I reported the problem at the front desk on Monday, but nobody has come to repair it. Could someone from maintenance visit this week? I am usually at home after five o'clock, and I can also leave the key at the office if that is more convenient. I would be very grateful for your help. Best regards, Marco Salazar",
+"Sleep plays an important role in how well students learn. When people sleep enough, their brains organize new information and store it in long-term memory. By contrast, students who stay awake all night before an exam often find it harder to concentrate and remember details. Studies have shown that even one night of poor sleep can reduce attention and slow down reaction time. Experts therefore recommend a regular schedule, with the same bedtime on most days, and advise students to avoid screens for an hour before sleeping. Small habits like these may seem unimportant, but over a whole semester they can make a noticeable difference in grades and in general well-being.",
+"Many students take part-time jobs while they study, and the effects can be positive or negative. A job teaches responsibility, time management and communication skills that are difficult to learn in a classroom. It can also reduce financial pressure, which allows students to focus on their courses. However, working too many hours leaves less time for homework and rest, and grades may suffer as a result. Most advisers suggest that students work no more than about fifteen hours a week during the semester. It is also wise to look for jobs on campus, because employers there usually understand academic schedules and are willing to adjust working hours around exams.",
+"Dear Dr. Nguyen, I hope you are well. I am a second-year student in your department, and I would like to ask your advice about changing one of my courses. I am currently enrolled in Statistics 201, but the class meets at the same time as a required laboratory session. Would it be possible to move to the evening section instead? I have already spoken to the registrar, who said that I need your approval. I can come to your office tomorrow at any time between ten and noon. Thank you for your time and support. Yours sincerely, Camila Torres",
+"Technology has changed the way teachers and students use class time. Tablets and laptops make it easy to look up information, share documents and take notes quickly. Some teachers also use educational games to keep students interested in difficult topics. Nevertheless, devices can be distracting, because notifications and social media compete for attention. Several schools have therefore introduced simple rules, such as closing all unrelated programs during lessons. In my view, technology is a useful tool only when it has a clear purpose. If students know why they are using a device, they are more likely to stay focused and to learn something new.",
+"The city council has announced a new plan to improve public transportation near the university. Two additional bus lines will connect the main campus with the student residences, and buses will run every ten minutes during the morning and evening rush hours. Students will receive a discounted monthly pass, which can be bought online or at the campus bookstore. Officials hope that the plan will reduce traffic and make it easier for people without cars to reach their classes on time. A public meeting will be held next Thursday, where residents can ask questions and suggest further changes to the proposed routes.",
+"An internship gives students the chance to apply what they have learned in a real workplace. Interns often discover which parts of their field they enjoy most, and they build contacts that may help them find a job after graduation. Employers also benefit, since they can observe talented students before offering them permanent positions. To get the most from the experience, interns should ask questions, accept feedback calmly and keep a record of the tasks they complete. Even a short summer internship can improve a resume significantly. For these reasons, many universities encourage students to look for placements as early as their second year of study.",
+"Dear Professor Kim, I am applying to a master's program in environmental science, and I am writing to ask whether you would be willing to write a letter of recommendation for me. I enjoyed your course on climate policy last spring, and I believe you know my work well. The application deadline is December first, and the online form takes only a few minutes to complete. I can send you my resume, my statement of purpose and a list of the programs I am applying to. Please let me know if you need anything else. I truly appreciate your consideration. Kind regards, Lucas Herrera",
+"Reading for pleasure is becoming less common among young people, and many teachers are worried about this trend. Books expand vocabulary, improve concentration and introduce readers to ideas and cultures that they might never meet otherwise. Fortunately, there are simple ways to build the habit. Readers can start with short stories or magazines about topics they already enjoy, and they can set aside twenty minutes each evening for reading. Joining a book club also helps, because friends encourage each other to finish what they begin. Over time, regular reading makes difficult texts easier to understand, which is especially useful for students who prepare for academic exams.",
+"Choosing where to study is a difficult decision, and both large cities and small towns have advantages. In a big city, students find more libraries, museums and internship opportunities, as well as a wide variety of people and cultures. However, living costs are usually higher, and the noise and traffic can make it hard to concentrate. Small towns, on the other hand, tend to be quieter and cheaper, and students often feel part of a close community. The disadvantage is that there may be fewer jobs and entertainment options. Ultimately, the best choice depends on a student's budget, goals and personality.",
+"Volunteering is an excellent way for students to contribute to their communities while developing useful skills. Helping at a food bank or teaching children to read requires patience, teamwork and creativity, and these qualities are valued by employers. Volunteers also meet people from many different backgrounds, which broadens their understanding of society. Some universities even offer academic credit for community service, although most students volunteer simply because they want to help. It is not necessary to spend many hours every week. Even two hours on a Saturday morning can have a real effect on the people who need support and on the volunteers themselves.",
+"Hello everyone, I am the president of the International Film Club, and I would like to invite you to our first meeting of the semester. We will gather in Room 210 of the student center on Wednesday at six o'clock. We plan to watch a short documentary and then talk about it over snacks and tea. New members are very welcome, and no experience is required. If you would like to suggest a film for future evenings, please reply to this message before Tuesday. We hope to see many of you there. Best wishes, Elena Vargas",
+"Making mistakes is a natural and necessary part of learning. When students avoid errors at all costs, they often stop trying new things and miss valuable opportunities to improve. By contrast, learners who treat mistakes as information usually make faster progress. After a test, for example, it is useful to review each wrong answer and ask why it happened. Was it a lack of knowledge, a careless reading or a lack of time? Writing down the reason helps the student choose a better strategy next time. Teachers can support this attitude by praising effort and by giving clear, specific feedback instead of only a final grade."
+];
+const TC_EMAIL = [
+"Write an email to your teacher. Tell him you will miss tomorrow's class and ask what you should study.",
+"Write an email to a classmate. Invite her to study together this weekend and suggest a place and a time.",
+"Write an email to the library. Ask about the opening hours and whether you can reserve a quiet room.",
+"Write an email to your landlord. Explain a problem in your apartment and ask when it can be fixed.",
+"Write an email to your professor. Ask for an extra day to finish an assignment and give a reason.",
+"Write an email to a language school. Ask about the price, the schedule and the start date of an evening course.",
+"Write an email to your academic adviser. Ask whether you can change one of your classes.",
+"Write an email to a company. You received the wrong product. Explain what happened and say what you want.",
+"Write an email to a professor you do not know. Ask if you may join his research group as a volunteer.",
+"Write an email to your neighbor. Politely ask her to keep the noise down at night.",
+"Write an email to the university office. Ask how to get an official copy of your transcript.",
+"Write an email to a friend abroad. Tell her about your plans for the summer and invite her to visit.",
+"Write an email to the manager of a gym. Ask about membership options and student discounts.",
+"Write an email to your professor. Ask for feedback on a draft essay and suggest a time to meet.",
+"Write an email to a club organizer. Say you want to join and ask what the first meeting will be about.",
+"Write an email to a hotel. Ask whether a room is available for two nights and ask about breakfast.",
+"Write an email to your teacher. Thank him for the course and ask for advice on how to keep improving."
+];
+const TC_OPINION = [
+"Universities should require every student to take a course in public speaking.",
+"Students learn more from group projects than from working alone.",
+"Cities should ban cars from their centers.",
+"Homework should be reduced in secondary schools.",
+"Online classes are as effective as classes on campus.",
+"Students should be paid for doing well in school.",
+"Learning a second language is more useful today than learning to write computer code.",
+"Social media does more harm than good for young people.",
+"Every student should do an internship before graduating.",
+"Libraries are no longer necessary in the age of the internet.",
+"Schools should start later in the morning.",
+"Art and music classes are as important as math and science.",
+"Governments should spend more money on public transportation than on roads.",
+"Studying abroad is the best way to learn a language.",
+"Students should be allowed to use artificial intelligence tools for homework.",
+"Competition motivates students more than cooperation.",
+"People learn more from failure than from success."
+];
+/* Ramp over the 34 writing days: free writing 1,1,2,2,3,3 ... 9 minutes in Writing I, 10 minutes from day 3 of Writing II. Copy: 60 s, then 90 s, then 120 s. */
+function typingPlan(sec, n){
+  const g = (sec==="writing2" ? 17 : 0) + n;
+  const compMin = Math.min(10, 1 + Math.floor((g-1)/2));
+  const copySecs = g<=8 ? 60 : g<=20 ? 90 : 120;
+  const text = TC_TEXTS[(g-1 + (sec==="writing2" ? 8 : 0)) % TC_TEXTS.length];
+  const prompt = sec==="writing2" ? "Write a post for the class discussion. Give your opinion, one reason and one example: \"" + TC_OPINION[n-1] + "\"" : TC_EMAIL[n-1];
+  return {g, compMin, copySecs, text, prompt, goal:TC_GOAL};
+}
+function prefixErr(typed, target){
+  const n = typed.length, m = target.length; let prev = new Array(m+1); for(let j=0;j<=m;j++) prev[j] = j;
+  for(let i=1;i<=n;i++){ const cur = new Array(m+1); cur[0] = i; const ch = typed.charCodeAt(i-1);
+    for(let j=1;j<=m;j++){ cur[j] = Math.min(prev[j]+1, cur[j-1]+1, prev[j-1] + (ch===target.charCodeAt(j-1) ? 0 : 1)); }
+    prev = cur; }
+  let best = Infinity; for(let j=0;j<=m;j++) if(prev[j]<best) best = prev[j]; return best;
+}
+function typingSeries(exclude){
+  const out = []; for(const k in S.work){ const w = S.work[k]; if(!w || k===exclude) continue;
+    if(w.kind==="W-TYPECHECK" && w.copy) out.push({at:w.at, c:w.copy.wpm, w:w.comp? w.comp.wpm : null, a:w.copy.acc, dev:w.dev||null});
+    else if(w.kind==="W-TYPE" && w.wpm!=null && !w.migrated) out.push({at:w.at, c:w.wpm, w:null, a:w.acc, dev:null}); }   /* results of the older one-off typing test still count */
+  return out.sort((a,b)=>String(a.at).localeCompare(String(b.at)));
+}
+R.typecheck = (b, ctx) => {
+  const key = ctx.key;
+  if(b.g===1 && !(S.work[key] && S.work[key].copy)){   /* credit the older Day 1 typing test as Part 1 so nobody repeats it */
+    const lk = "writing-1-tool_typing_speed_check-1", lg = S.work[lk];
+    if(lg && lg.wpm!=null){ S.work[key] = Object.assign({}, S.work[key], {kind:"W-TYPECHECK", copy:{wpm:lg.wpm, gross:lg.wpm, acc:lg.acc||0, secs:60, from:"earlier test"}, dev:null, at:lg.at||new Date().toISOString()}); S.work[lk] = Object.assign({}, lg, {migrated:true}); save(); }
+  }
+  const sv = S.work[key] || {};
+  const coarse = !!(window.matchMedia && matchMedia("(pointer:coarse)").matches);
+  const lock = ta=>{
+    ["paste","drop"].forEach(ev=>ta.addEventListener(ev, e=>{ e.preventDefault(); toast("Pasting is off in this exercise."); }));
+    ta.addEventListener("beforeinput", e=>{ if(/^insertFrom(Paste|Drop)/.test(e.inputType||"")) e.preventDefault(); });
+    ["autocorrect","autocapitalize","autocomplete"].forEach(a=>ta.setAttribute(a,"off")); ta.setAttribute("spellcheck","false"); ta.setAttribute("data-gramm","false");
+  };
+  const norm = s=>String(s).replace(/\s+/g," ").trim();
+  const done = h("div",{class:"result",role:"status"});
+  const refreshDone = ()=>{ const w = S.work[key]||{}; done.innerHTML = ""; if(w.copy && w.comp) done.append(h("span",{class:"score-chip"},"Typing Check complete")); };
+  /* phase 1: copy */
+  const cTarget = h("div",{class:"doc",style:"max-width:72ch;user-select:none","aria-label":"Text to copy"}, b.text);
+  const cTa = h("textarea",{class:"textarea tc-copy",style:"min-height:130px",placeholder:"Press Start, then type the text above exactly as it is written.",disabled:true,"aria-label":"Type the text here"}); lock(cTa);
+  const cTimer = h("span",{class:"timer"}, fmt(b.copySecs)); const cOut = h("div",{class:"result tc-copy-out",role:"status"});
+  const cStart = h("button",{class:"btn red tc-copy-start",type:"button"}, sv.copy? "Try again" : "Start copying");
+  let cCd = null, cRun = false, wStart = null;
+  const showCopy = (r, prev)=>{
+    const gap = b.goal - r.wpm; const parts = ['<span class="score-chip">'+r.wpm+' words/min</span> <span>'+r.acc+'% accurate. </span>'];
+    parts.push('<span>'+(r.wpm>=b.goal ? 'You reached the goal of '+b.goal+'+ words per minute. There is no upper limit, so keep pushing.' : 'Goal: '+b.goal+'+ words per minute. You are '+gap+' away.')+'</span>');
+    if(prev) parts.push(' <span class="muted">Your last check: '+prev.c+' words/min'+(r.wpm>prev.c? ' (+'+(r.wpm-prev.c)+')' : r.wpm<prev.c? ' ('+(r.wpm-prev.c)+')' : ' (same)')+'.</span>');
+    if(r.acc<90) parts.push(' <span>Accuracy is under 90%. Slow down a little: corrections cost more time than they save.</span>');
+    cOut.innerHTML = parts.join("");
+  };
+  const finishCopy = ()=>{
+    if(!cRun) return; cRun = false; const left = cCd.left(); cCd.stop(); cTa.disabled = true; cStart.disabled = false; cStart.textContent = "Try again";
+    const elapsed = Math.max(10, b.copySecs - left); const typed = norm(cTa.value); const err = prefixErr(typed, b.text); const good = Math.max(0, typed.length - err);
+    const r = {wpm:Math.round(good/5/(elapsed/60)), gross:Math.round(typed.length/5/(elapsed/60)), acc: typed.length? Math.round(100*good/typed.length) : 0, secs:Math.round(elapsed)};
+    const prev = typingSeries(key).slice(-1)[0] || null;
+    S.work[key] = Object.assign({}, S.work[key], {kind:"W-TYPECHECK", copy:r, dev: coarse? "touch":"kbd", at:new Date().toISOString()}); save();
+    showCopy(r, prev); wStart.disabled = false; refreshDone();
+  };
+  cStart.addEventListener("click", ()=>{ cTa.disabled = false; cTa.value = ""; cOut.innerHTML = ""; cTa.focus(); cStart.disabled = true; cRun = true; cCd = countdown(cTimer, b.copySecs, finishCopy, 10); });
+  cTa.addEventListener("input", ()=>{ if(cRun && norm(cTa.value).length >= norm(b.text).length) finishCopy(); });
+  /* phase 2: free writing */
+  const wPrompt = h("div",{class:"doc",style:"max-width:72ch"}, b.prompt);
+  const wTa = h("textarea",{class:"textarea tc-write",style:"min-height:200px",placeholder:"Press Start, then keep writing until the time is over. Do not stop to fix small mistakes.",disabled:true,"aria-label":"Write your own text here"}); lock(wTa);
+  const wTimer = h("span",{class:"timer"}, fmt(b.compMin*60)); const wOut = h("div",{class:"result tc-write-out",role:"status"});
+  wStart = h("button",{class:"btn red tc-write-start",type:"button"}, sv.comp? "Try again" : "Start writing ("+b.compMin+" min)"); wStart.disabled = !sv.copy;
+  let wCd = null, wRun = false;
+  const showComp = r=>{ wOut.innerHTML = '<span class="score-chip">'+r.words+' words</span> <span>'+r.wpm+' words per minute while composing. Keep the flow steady; you can fix details later in your homework.</span>'; };
+  const finishComp = ()=>{
+    if(!wRun) return; wRun = false; const left = wCd.left(); wCd.stop(); wTa.disabled = true; wStart.disabled = false; wStart.textContent = "Try again";
+    const elapsed = Math.max(10, b.compMin*60 - left); const nw = words(wTa.value); const r = {words:nw, wpm:Math.round(nw/(elapsed/60)), mins:b.compMin, secs:Math.round(elapsed), text:wTa.value.slice(0,4000)};
+    S.work[key] = Object.assign({}, S.work[key], {kind:"W-TYPECHECK", comp:r, at:new Date().toISOString()}); save(); showComp(r); refreshDone();
+  };
+  wStart.addEventListener("click", ()=>{ wTa.disabled = false; wTa.value = ""; wOut.innerHTML = ""; wTa.focus(); wStart.disabled = true; wRun = true; wCd = countdown(wTimer, b.compMin*60, finishComp, 30); });
+  if(sv.copy) showCopy(sv.copy, null); if(sv.comp) showComp(sv.comp); refreshDone();
+  return h("div",{class:"stack tc"},
+    h("p",null,"Every Writing day starts with a short typing check. Part 1 measures your copying speed. Part 2 trains you to keep writing your own ideas for "+b.compMin+" minute"+(b.compMin===1?"":"s")+", and the time grows as the course goes on. The goal is "+b.goal+"+ words per minute when you copy. There is no upper limit, so go as far as you can. You must finish both parts to complete the day; reaching the goal is not required."),
+    b.g===1? h("p",{class:"small muted"},"This first check sets your starting point. Nobody expects a high number today.") : null,
+    coarse? h("p",{class:"small muted"},"You seem to be on a phone or tablet. The real test uses a computer keyboard, so your results will be more useful on a computer.") : null,
+    h("div",{class:"stack"}, h("b",null,"Part 1 · Copy the text ("+fmt(b.copySecs)+")"), cTarget, h("div",{class:"row"}, cStart, cTimer), cTa, cOut),
+    h("div",{class:"stack"}, h("b",null,"Part 2 · Write your own text ("+b.compMin+" min)"), wPrompt, h("div",{class:"row"}, wStart, wTimer), wTa, wOut),
+    done);
+};
+REQ_LABEL.typecheck = "finish both parts of the Typing Check";
+["writing","writing2"].forEach(sec=>{
+  BS.sections[sec].days.forEach(d=>{
+    let legacyAt = -1; const kept = [];
+    d.stages.forEach((st,i)=>{
+      const bl = st.blocks || [];
+      if(bl.some(b=>b.t==="typing")){
+        if(bl.every(b=>b.t==="typing")){ if(legacyAt<0) legacyAt = kept.length; return; }
+        st.sid = st.sid || ((st.kind||"x")+"."+(st.title||"")); st.title = "Timed post"; st.blocks = bl.filter(b=>b.t!=="typing");
+      }
+      kept.push(st);
+    });
+    d.stages = kept;
+    let at = kept.findIndex(s=>s.kind==="habit");
+    if(at>0 && kept[at-1].kind==="reflect") at--;
+    if(at<0) at = legacyAt>=0 ? legacyAt : kept.length;
+    const p = typingPlan(sec, d.n);
+    d.stages.splice(at, 0, {kind:"tool", title:"Typing Check", sid:"typing_check", mins:Math.ceil(p.copySecs/60)+p.compMin+1, blocks:[Object.assign({t:"typecheck"}, p)]});
+  });
+});
+/*TYPECHECK_PATCH_END*/
+
 
 VIEW = parseHash();
 render();
@@ -10641,7 +10826,7 @@ function a11yLabel(root){
 }
 try{ new MutationObserver(()=>{ clearTimeout(a11yLabel._t); a11yLabel._t = setTimeout(()=>a11yLabel(),150); }).observe(document.body,{childList:true,subtree:true}); }catch(e){}
 /* test hooks exist only when a test harness sets window.__BS_ENABLE_TEST before the page loads; nothing is exposed to students */
-if(window.__BS_ENABLE_TEST) window.__BS_TEST = {dayOverride, isUnlocked, modOpen, modCalc, loadGrants, setACC:c=>{ ACC = Object.assign({}, ACC_DEFAULT, c); }, getACC:()=>ACC, viewHash, parseHash, blkKey, buildCW, ssPost, ssGet, signedIn, syncNow, loadStudents, go, adoptSession, signOutGoogle, restoreProgress, syncLabel, syncDirty, S:()=>S, SYNC, timers:{clear(){ clearTimeout(_syncT); clearTimeout(_retryT); }}, save};
+if(window.__BS_ENABLE_TEST) window.__BS_TEST = {dayOverride, isUnlocked, modOpen, modCalc, loadGrants, setACC:c=>{ ACC = Object.assign({}, ACC_DEFAULT, c); }, getACC:()=>ACC, viewHash, parseHash, blkKey, buildCW, ssPost, ssGet, signedIn, syncNow, loadStudents, go, adoptSession, signOutGoogle, restoreProgress, syncLabel, syncDirty, S:()=>S, dayReqs, typingSeries, SYNC, timers:{clear(){ clearTimeout(_syncT); clearTimeout(_retryT); }}, save};
 })();
 
 </script>
