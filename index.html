@@ -121,6 +121,36 @@ button{font:inherit;color:inherit}
 .fb-scores{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 .fb-score{border-radius:10px;padding:12px;border:1px solid var(--line)}
 .fb-score.ai{background:var(--navy);color:#fff;border-color:var(--navy)}
+.sc-why{border:1px solid var(--line);border-radius:10px;padding:12px;background:var(--paper)}
+.sc-scale{position:relative;padding:6px 0 0}
+.sc-track{position:relative;height:6px;border-radius:99px;background:var(--line)}
+.sc-track>i{position:absolute;left:0;top:0;height:6px;border-radius:99px;background:var(--accent)}
+.sc-track>b{position:absolute;top:-6px;width:18px;height:18px;margin-left:-9px;border-radius:50%;background:var(--paper);border:2px solid var(--accent)}
+.sc-ticks{display:flex;justify-content:space-between;margin-top:6px;font-size:.72rem;color:var(--muted);font-family:var(--f-mono)}
+.sc-levels{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px}
+.sc-lv{background:var(--ground);border-radius:8px;padding:8px 10px}
+.sc-lv.next{background:var(--accent-soft)}
+.sc-line{display:flex;gap:8px;font-size:.9rem;align-items:flex-start}
+.sc-mark{font-weight:700;min-width:14px}
+.sc-line.earned .sc-mark{color:var(--ok)}
+.sc-line.held .sc-mark{color:var(--warn)}
+.sc-line.next .sc-mark{color:var(--accent)}
+.sc-chips{display:flex;flex-wrap:wrap;gap:6px}
+.sc-chip{padding:2px 8px;border-radius:6px;font-size:.9rem}
+.sc-chip.ok{background:var(--ok-soft);color:var(--ok)}
+.sc-chip.miss{background:var(--err-soft);color:var(--err-ink);text-decoration:line-through}
+.gapflag{border-radius:8px;padding:8px 12px}
+.gapflag.warn{background:var(--warn-soft);color:var(--warn)}
+.gapflag.ok{background:var(--ok-soft);color:var(--ok)}
+.meter.mid>i{background:var(--warn)}
+.meter.low>i{background:var(--err)}
+.res-table{min-width:640px}
+.res-table td{vertical-align:middle}
+.sc-line mark{background:var(--hl);color:inherit;padding:0 3px;border-radius:3px}
+.res-row{cursor:pointer}
+.res-row:hover,.res-row:focus{background:var(--ground)}
+.gap-warn{color:var(--warn);font-weight:700}
+.num-in{width:90px}
 .fb-score.ai .small{color:rgba(255,255,255,.75)}
 .fb-score .big{font-family:var(--f-display);font-size:1.9rem;line-height:1.1}
 .fb-score.pending{border-style:dashed;border-color:var(--red)}
@@ -7455,7 +7485,7 @@ function ymd(t){ const d = new Date(t); if(isNaN(d)) return null; return d.getFu
 function activityTimes(){ const out = []; const add = t=>{ if(t) out.push(String(t)); }; for(const k in S.res) add((S.res[k]||{}).at); for(const k in S.days) add((S.days[k]||{}).at); (S.subs||[]).forEach(x=>add(x.at)); return out; }
 function activityDates(){ const set = {}; activityTimes().forEach(t=>{ const y = ymd(t); if(y) set[y] = 1; }); return Object.keys(set).sort(); }
 function lastActivity(){ const a = activityTimes().sort(); return a.length? a[a.length-1] : null; }
-function progressSummary(){ const sections = {}; SECS.forEach(sec=>{ try{ const st = secStats(sec); sections[sec] = {done:st.done,total:st.total,c:st.c,t:st.t,self:st.self}; }catch(e){} }); return {sections, mocks:Object.keys(S.res||{}).filter(k=>k.endsWith("-summary")).length, last:S.last||null, started:S.started||null, types:(function(){ try{ return taskAgg(); }catch(e){ return {}; } })(), lastAct:(function(){ try{ return lastActivity(); }catch(e){ return null; } })(), typing:(function(){ try{ return typingSeries().slice(-40).map(x=>({d:ymd(x.at),c:x.c,w:x.w,a:x.a,v:x.dev})); }catch(e){ return []; } })(), act:(function(){ try{ return activityDates().slice(-60); }catch(e){ return []; } })()}; }
+function progressSummary(){ const sections = {}; SECS.forEach(sec=>{ try{ const st = secStats(sec); sections[sec] = {done:st.done,total:st.total,c:st.c,t:st.t,self:st.self}; }catch(e){} }); return {sections, mocks:Object.keys(S.res||{}).filter(k=>k.endsWith("-summary")).length, last:S.last||null, started:S.started||null, types:(function(){ try{ return taskAgg(); }catch(e){ return {}; } })(), lastAct:(function(){ try{ return lastActivity(); }catch(e){ return null; } })(), ex:(function(){ try{ const m = {}; for(const k in S.res){ const r = S.res[k]; if(!r || !r.tt || String(r.tt).indexOf("MOCK")===0 || /-summary$/.test(k)) continue; const mt = k.match(/^([a-z0-9]+)-(\d+)-/); if(!mt || SECS.indexOf(mt[1])<0) continue; const id = mt[1]+"|"+mt[2]+"|"+r.tt; const e = m[id] = m[id] || {s:mt[1], d:+mt[2], tt:r.tt, c:0, t:0, at:null}; e.c += r.c; e.t += r.t; if(r.at && (!e.at || r.at>e.at)) e.at = r.at; } return Object.keys(m).map(k=>m[k]).sort((a,b)=>String(b.at||"").localeCompare(String(a.at||""))).slice(0,120); }catch(e){ return []; } })(), typing:(function(){ try{ return typingSeries().slice(-40).map(x=>({d:ymd(x.at),c:x.c,w:x.w,a:x.a,v:x.dev})); }catch(e){ return []; } })(), act:(function(){ try{ return activityDates().slice(-60); }catch(e){ return []; } })()}; }
 function syncSoon(){ if(!SB || !signedIn()) return; clearTimeout(_syncT); _syncT = setTimeout(syncNow, 4000); }
 function syncFail(e){
   const off = (typeof navigator!=="undefined" && navigator.onLine===false) || /Failed to fetch|NetworkError|network/i.test(String((e&&e.message)||e||""));
@@ -8607,10 +8637,13 @@ const STU = {rows:null, sel:null, err:"", loading:false};
 async function loadStudents(){
   STU.loading = true; STU.err = ""; render();
   try{
+    const SUBC = "id,user_id,section,day,task,app,prompt,response_text,words,audio_path,ai_result,teacher_score,teacher_note,created_at";
+    const subQ = c=>SB.from("submissions").select(c).order("created_at",{ascending:false}).limit(1000);
+    const subP = (async()=>{ let r = await subQ(FBCOL? SUBC+",ai_feedback" : SUBC); if(r.error && FBCOL && /ai_feedback/.test(String(r.error.message||r.error.details||""))){ FBCOL = false; r = await subQ(SUBC); } return r; })();
     const [p, pr, sub] = await Promise.all([
       SB.from("profiles").select("id,full_name,email,role,created_at").order("full_name"),
       SB.from("progress").select("user_id,summary,updated_at"),
-      SB.from("submissions").select("id,user_id,section,day,task,app,prompt,response_text,words,audio_path,ai_result,teacher_score,teacher_note,created_at").order("created_at",{ascending:false}).limit(1000)]);
+      subP]);
     for(const x of [p,pr,sub]) if(x.error) throw x.error;
     const pm = {}; pr.data.forEach(x=>{ pm[x.user_id] = x; }); const sm = {}; sub.data.forEach(x=>{ (sm[x.user_id] = sm[x.user_id]||[]).push(x); });
     STU.rows = p.data.map(u=>{ const subs = sm[u.id]||[]; const prog = pm[u.id]; const last = [subs[0] && subs[0].created_at, prog && prog.updated_at].filter(Boolean).sort().pop() || null;
@@ -8629,6 +8662,8 @@ function stuSubCard(x){
   if(x.prompt) parts.push(h("details",null, h("summary",{class:"small muted",style:"cursor:pointer"},"Task prompt"), h("p",{class:"small",style:"white-space:pre-wrap"}, x.prompt)));
   if(x.response_text) parts.push(h("p",{style:"white-space:pre-wrap;margin:6px 0"}, x.response_text));
   if(x.audio_path){ parts.push(audio); audio.append(h("button",{class:"btn sm",type:"button",onclick:async(ev)=>{ ev.target.disabled = true; try{ const sg = await SB.storage.from("recordings").createSignedUrl(x.audio_path, 3600); if(sg.error) throw sg.error; audio.innerHTML = ""; audio.append(h("audio",{controls:"",src:sg.data.signedUrl,style:"width:100%"})); }catch(e){ ev.target.disabled = false; toast(sbErr(e)); } }},"Load recording")); }
+  const rep = reportFor({task:x.task, ai:x.ai_result, fb:x.ai_feedback||null, transcript:x.response_text, prompt:x.prompt});
+  if(rep) parts.push(h("details",null, h("summary",{class:"small muted",style:"cursor:pointer"},"Why this score"), rep));
   parts.push(h("div",{class:"row small",style:"gap:12px;flex-wrap:wrap"},
     h("span",{class:"pill"+(ai&&!ai.err&&ai.score?"":" warn")}, ai&&ai.err? "AI: not scored" : ai&&ai.score? "AI "+ai.score+"/5"+(ai.band? " · Band ≈ "+ai.band : "") : "AI: in the queue"),
     h("span",{class:"pill"+(x.teacher_score==null?" warn":"")}, x.teacher_score==null? "Teacher: not scored" : "Teacher "+x.teacher_score+"/5"),
@@ -8656,7 +8691,7 @@ function viewStudents(){
     return h("button",{class:"tq-item",type:"button",onclick:()=>{ STU.sel = r; render(); window.scrollTo(0,0); }},
       h("span",null, h("b",null,u.full_name||u.email), h("div",{class:"small muted"}, u.email+(u.role==="teacher"?" · teacher account":""))),
       h("span",{class:"small",style:"text-align:right"}, h("div",null, r.prog? done+"/"+total+" days" : "no progress yet"), h("div",{class:"muted"}, r.subs.length+" submitted"+(r.unscored? " · "+r.unscored+" to score":"")), h("div",{class:"muted"}, fmtWhen(r.last)))); });
-  return h("main",{class:"page"}, top, STU.rows.some(r=>r.p.role!=="teacher")? groupOverview() : null, list.length? h("div",{class:"stack",style:"gap:8px"}, ...list) : h("p",{class:"muted"},"No students have signed in yet."));
+  return h("main",{class:"page"}, top, STU.rows.some(r=>r.p.role!=="teacher")? groupOverview() : null, STU.rows.some(r=>r.p.role!=="teacher")? resultsPanel() : null, list.length? h("div",{class:"stack",style:"gap:8px"}, ...list) : h("p",{class:"muted"},"No students have signed in yet."));
 }
 /* ---------------- Teacher: group overview (who is stuck, who waits for a score, where the group struggles) ---------------- */
 const STALL_DAYS = 4;
@@ -9167,13 +9202,185 @@ function markFixes(text, fixes){
   spans.forEach(([a,b])=>{ if(a<p) return; out.push(String(text).slice(p,a)); out.push(h("mark",null,String(text).slice(a,b))); p = b; });
   out.push(String(text).slice(p)); return out;
 }
+/*SCOREREPORT_START*/
+/* ---------------- StratSix: score report (why this score, scale, word check, teacher comparison) ---------------- */
+const fs1 = v => String(Math.round(Number(v)*2)/2);
+function rubricFor(task){ const t = String(task||""); return /e-?mail/i.test(t)? "email" : /discussion/i.test(t)? "discussion" : /interview/i.test(t)? "interview" : /repeat/i.test(t)? "repeat" : null; }
+function numScore(v){ if(v===""||v==null) return null; const n = Number(v); return isNaN(n)? null : n; }
+function aiNum(it){ const a = aiParse(it && (it.ai!=null? it.ai : it.ai_result)); return a && !a.err && a.score!=null && !isNaN(Number(a.score))? Number(a.score) : null; }
+function gapInfo(ai, y){ if(ai==null || y==null) return null; const d = Math.round((ai-y)*10)/10; return {d, warn: Math.abs(d)>1}; }
+function normWord(w){ return String(w||"").toLowerCase().replace(/’/g,"'").replace(/[^a-z0-9'-]/g,"").replace(/^['-]+|['-]+$/g,""); }
+function wordsOf(t){ return String(t||"").split(/\s+/).map(normWord).filter(Boolean); }
+function alignWords(target, said){
+  const n = target.length, m = said.length; const dp = []; for(let i=0;i<=n;i++) dp.push(new Array(m+1).fill(0));
+  for(let i=n-1;i>=0;i--) for(let j=m-1;j>=0;j--) dp[i][j] = target[i]===said[j]? dp[i+1][j+1]+1 : Math.max(dp[i+1][j], dp[i][j+1]);
+  const hit = new Array(n).fill(false); let i = 0, j = 0;
+  while(i<n && j<m){ if(target[i]===said[j]){ hit[i] = true; i++; j++; } else if(dp[i+1][j]>=dp[i][j+1]) i++; else j++; }
+  return hit;
+}
+function scoreScale(v){
+  const p = Math.max(0, Math.min(5, Number(v)))*20;
+  return h("div",{class:"sc-scale",role:"img","aria-label":"Score "+fs1(v)+" on a scale from 0 to 5"},
+    h("div",{class:"sc-track"}, h("i",{style:"width:"+p+"%"}), h("b",{style:"left:"+p+"%"})),
+    h("div",{class:"sc-ticks"}, ...[0,1,2,3,4,5].map(n=>h("span",null,String(n)))));
+}
+function levelCrit(it){
+  const rid = rubricFor(it && it.task), rb = rid && BS.rubrics[rid], fb = it && it.fb;
+  if(!rb || !fb || typeof fb!=="object" || !Array.isArray(fb.criteria)) return null;
+  let best = null;
+  fb.criteria.forEach(c=>{ const s = numScore(c && c.score); if(s==null || s<0 || s>5) return;
+    const def = rb.criteria.find(x=>String(x.id).toLowerCase()===String((c&&c.id)||"").toLowerCase() || String(x.name).toLowerCase()===String((c&&c.label)||"").toLowerCase());
+    if(def && (!best || s<best.s)) best = {s, def}; });
+  return best;
+}
+function levelBoxes(it){
+  const lc = levelCrit(it); if(!lc) return null;
+  const f = Math.floor(lc.s), lv = lc.def.levels || {}, cur = lv[f], nxt = f<5? lv[f+1] : null; if(!cur) return null;
+  return h("div",{class:"sc-levels"},
+    h("div",{class:"sc-lv"}, h("div",{class:"small muted"}, lc.def.name+" · level "+f+(lc.s%1? " reached, part of "+(f+1) : " reached")), h("div",{class:"small"}, cur)),
+    nxt? h("div",{class:"sc-lv next"}, h("div",{class:"small muted"}, "Level "+(f+1)+" · next"), h("div",{class:"small"}, nxt)) : null);
+}
+function quoteOk(it, q){ q = String(q||"").trim(); if(!q) return false; const t = String((it&&(it.transcript||it.response_text))||""); return !t || t.toLowerCase().indexOf(q.toLowerCase())>=0; }
+function whyLine(mark, cls, label, o, it){
+  if(!o || !o.text) return null;
+  return h("div",{class:"sc-line "+cls}, h("span",{class:"sc-mark","aria-hidden":"true"}, mark), h("div",null, h("b",null, label+" "), String(o.text), quoteOk(it,o.quote)? h("span",null," ", h("mark",null, "“"+String(o.quote).trim()+"”")) : null));
+}
+function whyBlock(it){
+  const s = aiNum(it); if(s==null) return null;
+  const fb = (it.fb && typeof it.fb==="object")? it.fb : null, why = fb && fb.why && typeof fb.why==="object"? fb.why : null;
+  const lv = Math.floor(s), half = (s-lv)>=0.5;
+  const summary = (why && why.summary)? String(why.summary) : (half? "You fully reached level "+lv+" and part of level "+(lv+1)+"." : lv>=5? "You reached the top level." : "You reached level "+lv+".");
+  const nextTxt = fb && fb.next? String(fb.next) : "";
+  return h("div",{class:"sc-why stack",style:"gap:10px"},
+    h("div",{class:"row",style:"justify-content:space-between;align-items:baseline"}, h("b",null,"Why "+fs1(s)+(half? " and not "+lv+" or "+(lv+1) : "")), h("span",{class:"small muted"},"Practice estimate")),
+    scoreScale(s),
+    h("div",{class:"small"}, summary),
+    levelBoxes(it),
+    whyLine("✓","earned","What earned it.", why&&why.earned, it),
+    whyLine("!","held","What held it back.", why&&why.held_back, it),
+    nextTxt? h("div",{class:"sc-line next"}, h("span",{class:"sc-mark","aria-hidden":"true"},"→"), h("div",null, nextTxt)) : null,
+    (!fb)? h("div",{class:"small muted"},"A detailed report is not available for this score.") : null);
+}
+function repeatReport(it){
+  const raw = String((it && it.prompt) || "").trim().split(/\s+/).map(w=>({w, n:normWord(w)})).filter(x=>x.n);
+  const sd = wordsOf(it && (it.transcript || it.response_text));
+  if(!raw.length || !sd.length) return null;
+  const tg = raw.map(x=>x.n), hit = alignWords(tg, sd), got = hit.filter(Boolean).length, extra = Math.max(0, sd.length-got), p = Math.round(100*got/tg.length);
+  const missed = []; raw.forEach((x,i)=>{ if(!hit[i] && missed.indexOf(x.n)<0) missed.push(x.n); });
+  const perfect = got===tg.length && extra===0;
+  const text = perfect? "You repeated every word." : "You repeated "+got+" of "+tg.length+" words."+(missed.length? " Missed: "+missed.slice(0,6).join(", ")+"." : "")+(extra? " You also added or changed "+extra+" word"+(extra===1?"":"s")+"." : "");
+  return h("div",{class:"sc-why rep stack",style:"gap:10px"},
+    h("div",{class:"row",style:"justify-content:space-between;align-items:baseline"}, h("b",null,"Word check"), h("span",{class:"small"}, got+" of "+tg.length+" words ("+p+"%)")),
+    h("div",{class:"sc-chips"}, ...raw.map((x,i)=>h("span",{class:"sc-chip "+(hit[i]? "ok" : "miss")}, x.w))),
+    h("div",{class:"small"}, text),
+    perfect? null : h("div",{class:"sc-line next"}, h("span",{class:"sc-mark","aria-hidden":"true"},"→"), h("div",null,"To reach 5, repeat every word, including small words such as “the” and “a”.")),
+    h("div",{class:"small muted"},"Calculated by StratSix from what the app heard. The AI score also looks at meaning."));
+}
+function reportFor(it){ return rubricFor(it && it.task)==="repeat"? (repeatReport(it) || whyBlock(it)) : whyBlock(it); }
+function gapFlag(el, ai, y){
+  const g = gapInfo(ai, y); el.hidden = !g; if(!g) return g;
+  el.className = "gapflag small "+(g.warn? "warn" : "ok"); const a = Math.abs(g.d);
+  el.textContent = g.warn? "Differs from the AI by "+a.toFixed(1)+" points. Review the AI reasoning before you publish." : "Within "+a.toFixed(1)+" points of the AI. No review needed.";
+  return g;
+}
+function baseTask(t){ return String(t||"").replace(/^Test \d+\s*/i,"").replace(/\s*Q?\d+$/i,"").trim().toLowerCase(); }
+function ctxLine(it, list){
+  const others = (list||[]).filter(x=>x && x.row!==it.row && x.section===it.section);
+  const same = others.filter(x=>baseTask(x.task)===baseTask(it.task) && String(x.day||"")===String(it.day||"")).map(aiNum).filter(v=>v!=null);
+  const mine = others.filter(x=>it.email && x.email===it.email && aiNum(x)!=null && String(x.time)<String(it.time)).sort((a,b)=>String(b.time).localeCompare(String(a.time))).slice(0,3).map(aiNum).reverse();
+  const first = String(it.name||"Student").split(/\s+/)[0], out = [];
+  if(same.length) out.push("Class average for this task: "+(same.reduce((a,v)=>a+v,0)/same.length).toFixed(1)+" ("+same.length+" response"+(same.length===1?"":"s")+")");
+  if(mine.length) out.push(first+"’s last "+mine.length+": "+mine.map(fs1).join(", "));
+  return out.join(" · ");
+}
+const CTXQ = {t:0, items:null, p:null};
+function ctxItems(){
+  if(CTXQ.items && Date.now()-CTXQ.t<60000) return Promise.resolve(CTXQ.items);
+  if(CTXQ.p) return CTXQ.p;
+  CTXQ.p = ssGet({action:"queue", all:"1"}).then(j=>{ CTXQ.items = j.items||[]; CTXQ.t = Date.now(); CTXQ.p = null; return CTXQ.items; }).catch(()=>{ CTXQ.p = null; return []; });
+  return CTXQ.p;
+}
+
+/* ---------------- Teacher: all results table (accuracy, AI score, your score, gap) ---------------- */
+const secName = s => s==="writing"? "Writing I" : s==="writing2"? "Writing II" : cap(String(s||""));
+const ttSec = k => ({R:"reading",L:"listening",W:"writing",S:"speaking",X:"strategy"})[String(k||"")[0]] || "";
+function resultRows(){
+  const out = [];
+  (STU.rows||[]).filter(r=>r.p.role!=="teacher").forEach(r=>{
+    const name = r.p.full_name || r.p.email;
+    r.subs.forEach(x=>{
+      const ai = aiParse(x.ai_result), aiv = ai && !ai.err && ai.score!=null && !isNaN(Number(ai.score))? Number(ai.score) : null;
+      let c = null, n = null;
+      if(rubricFor(x.task)==="repeat" && x.prompt && x.response_text){ const tg = wordsOf(x.prompt); if(tg.length){ c = alignWords(tg, wordsOf(x.response_text)).filter(Boolean).length; n = tg.length; } }
+      out.push({r, name, kind:"scored", label:x.section+" · "+x.task+(x.day? " · D"+x.day : ""), at:x.created_at, c, n, ai:aiv, aiErr:!!(ai&&ai.err), y:x.teacher_score==null? null : Number(x.teacher_score)});
+    });
+    const sm = (r.prog && r.prog.summary) || {}, ex = Array.isArray(sm.ex)? sm.ex : null;
+    if(ex) ex.forEach(e=>{ if(e && e.t) out.push({r, name, kind:"auto", label:secName(e.s)+" · "+(TT[e.tt]||e.tt)+(e.d? " · D"+e.d : ""), at:e.at||null, c:e.c, n:e.t, ai:null, y:null}); });
+    else { const ty = sm.types || {}; Object.keys(ty).forEach(k=>{ const v = ty[k]; if(v && v.t) out.push({r, name, kind:"auto", label:secName(ttSec(k))+" · "+(TT[k]||k), at:null, c:v.c, n:v.t, ai:null, y:null}); }); }
+  });
+  return out;
+}
+function rowStatus(x){
+  if(x.kind==="auto") return (x.n>=5 && x.c/x.n<0.6)? "low" : "auto";
+  const g = gapInfo(x.ai, x.y);
+  if(g && g.warn) return "review";
+  if(x.ai!=null && x.y==null) return "pending";
+  if(x.ai==null && x.aiErr && x.y==null) return "ainot";
+  if(x.ai==null && x.y==null) return "airun";
+  return "ok";
+}
+function resultStats(rows){
+  const auto = rows.filter(x=>x.kind==="auto"), both = rows.filter(x=>gapInfo(x.ai,x.y));
+  const ct = auto.reduce((a,x)=>a+x.c,0), nt = auto.reduce((a,x)=>a+x.n,0);
+  return {acc: nt? Math.round(100*ct/nt) : null,
+    near: both.length? Math.round(100*both.filter(x=>Math.abs(x.ai-x.y)<=0.5+1e-9).length/both.length) : null,
+    bias: both.length? both.reduce((a,x)=>a+(x.ai-x.y),0)/both.length : null,
+    attention: rows.filter(x=>{ const k = rowStatus(x); return k==="review" || k==="low"; }).length};
+}
+const RESV = {f:"all", mode:0, all:false};
+const RES_STATUS = {ok:["ok","Reviewed"], auto:["ok","Auto-scored"], review:["warn","Review the gap"], pending:["plain","Waiting for you"], low:["warn","Low accuracy"], ainot:["plain","Not scored by AI"], airun:["plain","AI pending"]};
+function resultsPanel(){
+  const rows = resultRows(), st = resultStats(rows);
+  const tile = (n,label)=>h("div",{class:"ov-tile"}, h("b",null,String(n)), h("span",{class:"small muted"},label));
+  const tiles = h("div",{class:"ov-tiles"}, tile(st.acc==null? "–" : st.acc+"%","group accuracy (auto-scored)"), tile(st.near==null? "–" : st.near+"%","AI within 0.5 of your score"), tile(st.bias==null? "–" : (st.bias>=0?"+":"")+st.bias.toFixed(1),"average AI minus you"), tile(st.attention,"need attention"));
+  const body = h("tbody",null), more = h("button",{class:"btn ghost sm",type:"button",hidden:true});
+  const fbtn = {}, bar = h("div",{class:"row",style:"gap:8px;flex-wrap:wrap;align-items:center"});
+  [["all","All"],["review","Needs review"],["pending","Pending your score"],["low","Low accuracy"]].forEach(([k,l])=>{ const b = h("button",{class:"btn sm",type:"button","aria-pressed":RESV.f===k?"true":"false"}, l); fbtn[k] = b; b.addEventListener("click",()=>{ RESV.f = k; draw(); }); bar.append(b); });
+  const sortB = h("button",{class:"btn sm",type:"button",style:"margin-left:auto"}); sortB.addEventListener("click",()=>{ RESV.mode = (RESV.mode+1)%2; draw(); }); bar.append(sortB);
+  function draw(){
+    Object.keys(fbtn).forEach(k=>fbtn[k].setAttribute("aria-pressed", RESV.f===k?"true":"false"));
+    sortB.textContent = RESV.mode===0? "Sort: largest AI gap" : "Sort: lowest accuracy";
+    let list = rows.filter(x=>RESV.f==="all" || rowStatus(x)===RESV.f);
+    list.sort((a,b)=>{ const ga = gapInfo(a.ai,a.y), gb = gapInfo(b.ai,b.y);
+      const k = RESV.mode===0? (gb? Math.abs(gb.d) : -1)-(ga? Math.abs(ga.d) : -1) : (a.n? a.c/a.n : 9)-(b.n? b.c/b.n : 9);
+      return k || String(b.at||"").localeCompare(String(a.at||"")); });
+    const shown = RESV.all? list : list.slice(0,40);
+    body.innerHTML = "";
+    shown.forEach(x=>{
+      const k = rowStatus(x), g = gapInfo(x.ai,x.y), p = x.n? Math.round(100*x.c/x.n) : null;
+      const pc = p==null? h("span",{class:"small muted"},"–") : h("div",null, h("div",{class:"row",style:"gap:6px;align-items:center"}, h("span",{class:"small",style:"min-width:34px"}, p+"%"), h("div",{class:"meter "+(p>=80?"":p>=60?"mid":"low"),style:"width:44px"}, h("i",{style:"width:"+p+"%"}))), h("div",{class:"small muted"}, x.c+" of "+x.n+(x.n<5? " · few data" : "")));
+      const tr = h("tr",{class:"res-row",tabindex:"0"}, h("td",null,x.name), h("td",{class:"small muted"},x.label), h("td",null,pc), h("td",{class:"mono",style:"text-align:center"}, x.ai==null? "–" : fs1(x.ai)), h("td",{class:"mono",style:"text-align:center"}, x.y==null? "–" : fs1(x.y)), h("td",{class:"mono"+(g&&g.warn?" gap-warn":""),style:"text-align:center"}, g? (g.d>0?"+":"")+g.d.toFixed(1) : "–"), h("td",null, h("span",{class:"pill "+RES_STATUS[k][0]}, RES_STATUS[k][1])));
+      const open = ()=>{ STU.sel = x.r; render(); window.scrollTo(0,0); };
+      tr.addEventListener("click", open); tr.addEventListener("keydown",e=>{ if(e.key==="Enter") open(); });
+      body.append(tr);
+    });
+    if(!shown.length) body.append(h("tr",null, h("td",{colspan:"7",class:"small muted"}, rows.length? "Nothing matches this filter." : "No results yet. They appear after students submit work or check answers.")));
+    more.hidden = list.length<=40; more.textContent = RESV.all? "Show fewer" : "Show all "+list.length;
+  }
+  more.addEventListener("click",()=>{ RESV.all = !RESV.all; draw(); });
+  draw();
+  return h("div",{class:"panel stack",id:"results-table"}, h("div",{class:"eyebrow"},"All results"), h("h2",null,"Every exercise: accuracy, AI score, your score"), tiles, bar,
+    h("div",{class:"tbl-wrap"}, h("table",{class:"format-table res-table"}, h("thead",null, h("tr",null, ...["Student","Exercise","% correct","AI","You","AI − you","Status"].map((t,i)=>h("th",{style:i>=3&&i<=5?"text-align:center":""},t)))), body)), more,
+    h("div",{class:"small muted"},"Positive difference: the AI scored higher than you. Reading and Listening are scored by correct answers. Writing and Speaking are scored 0 to 5. Fewer than 5 answers is marked “few data”. Click a row to open the student."));
+}
+/*SCOREREPORT_END*/
 function fbDetail(it){
   const fb = it.fb; if(!fb || typeof fb!=="object") return null; const parts = [];
   const cr = Array.isArray(fb.criteria)? fb.criteria.filter(c=>c && c.label && c.score!=null && !isNaN(Number(c.score))) : [];
   if(cr.length) parts.push(h("div",{class:"stack",style:"gap:6px"}, h("b",{class:"small"},"What affected your score"), h("div",{class:"bars"}, ...cr.map(c=>{ const v = Math.max(0,Math.min(5,Number(c.score))); return h("div",{class:"stack",style:"gap:2px"}, h("div",{class:"bar-row"}, h("span",null,String(c.label)), h("div",{class:"meter"+(v<3?" red":"")}, h("i",{style:"width:"+(v*20)+"%"})), h("span",{class:"v"}, v+"/5")), c.note? h("div",{class:"small muted"}, String(c.note)) : null); }))));
   const fx = Array.isArray(fb.fixes)? fb.fixes.filter(f=>f && f.from && f.to) : [];
   if(fx.length) parts.push(h("div",{class:"stack",style:"gap:6px"}, h("b",{class:"small"},"Fix these"), h("ul",{class:"fb-fixes"}, ...fx.slice(0,6).map(f=>h("li",null, h("span",{class:"fx-from"}, String(f.from)), " → ", h("span",{class:"fx-to"}, String(f.to)), f.why? h("div",{class:"small muted"}, String(f.why)) : null)))));
-  if(fb.next) parts.push(h("div",{class:"why small"}, h("b",null,"Next time: "), String(fb.next)));
+  if(fb.next && !(fb.why && typeof fb.why==="object")) parts.push(h("div",{class:"why small"}, h("b",null,"Next time: "), String(fb.next)));
   return parts.length? h("div",{class:"stack fb-detail",style:"gap:10px"}, ...parts) : null;
 }
 function fbCard(it){
@@ -9185,6 +9392,7 @@ function fbCard(it){
   return h("div",{class:"fb-card"},
     h("div",{class:"row",style:"justify-content:space-between"}, h("div",null, h("div",{class:"eyebrow"}, it.section+(it.day? " · Day "+it.day : "")+" · "+new Date(it.time).toLocaleDateString()), h("h3",null, it.task)), it.link? h("a",{class:"btn sm",href:it.link,target:"_blank",rel:"noopener"}, it.section==="Speaking"? "My recording" : "My portfolio") : null),
     h("div",{class:"fb-scores"}, aiBox, tBox),
+    reportFor(it),
     fbDetail(it),
     it.transcript? h("details",{class:"small",open:(it.fb&&Array.isArray(it.fb.fixes)&&it.fb.fixes.length)?true:null}, h("summary",{style:"cursor:pointer"}, it.section==="Speaking"? "What we heard" : "Your response"), h("div",{class:"rec-heard",style:"margin-top:6px"}, ...markFixes(it.transcript, it.fb&&it.fb.fixes))) : null,
     h("div",{class:"row",style:"gap:8px;flex-wrap:wrap"}, h("button",{class:"btn primary sm",type:"button",onclick:()=>go(retryTarget(it))}, it.mock? "Open the Test Simulator" : "Try again")),
@@ -9216,18 +9424,24 @@ function teacherReview(){
     status.textContent = "Loading…"; try{ const j = await ssGet({action:"queue", tkey, all:showAll.checked?"1":""}); items = j.items||[]; status.textContent = items.length? items.length+" to review" : "Nothing waiting."; drawQ(); }catch(e){ status.textContent = e.message; } }
   function drawQ(){ qbox.innerHTML = ""; items.forEach(it=>{ const ai = aiParse(it.ai); const b = h("button",{class:"tq-item",type:"button","aria-pressed":sel===it?"true":"false"}, h("span",null, h("b",null,it.name), h("div",{class:"small muted"}, it.section+(it.day?" · Day "+it.day:"")+" · "+it.task)), h("span",{class:"mono small"}, ai&&ai.score? "AI "+ai.score : "AI –")); b.addEventListener("click",()=>{ sel = it; drawQ(); drawD(); }); qbox.append(b); }); }
   function drawD(){ detail.innerHTML = ""; if(!sel) return; const it = sel; const ai = aiParse(it.ai);
-    let pick = it.tscore===""? null : Number(it.tscore);
-    const sp = h("div",{class:"score-pick",role:"group","aria-label":"Your score"}, ...[0,1,2,3,4,5].map(v=>{ const b = h("button",{type:"button","aria-pressed":pick===v?"true":"false"}, String(v)); b.addEventListener("click",()=>{ pick = v; [...sp.children].forEach(x=>x.setAttribute("aria-pressed","false")); b.setAttribute("aria-pressed","true"); }); return b; }));
+    const aiV = aiNum(it);
+    const sp = h("input",{type:"number",min:"0",max:"5",step:"0.5",class:"input num-in",id:"tq-score","aria-label":"Your score",value: it.tscore===""? "" : String(it.tscore)});
+    const flag = h("div",{class:"gapflag small",role:"status",hidden:true});
+    const upd = ()=>gapFlag(flag, aiV, numScore(sp.value));
+    sp.addEventListener("input", upd); upd();
+    const ctxBox = h("div",{class:"small muted"});
+    ctxItems().then(list=>{ ctxBox.textContent = ctxLine(it, list); });
     const note = h("textarea",{class:"textarea",id:"tq-note",style:"min-height:80px",placeholder:"Note to the student (optional)"}); note.value = it.tnote||"";
     const saveB = h("button",{class:"btn red",type:"button"},"Publish to student");
-    const agree = ai&&ai.score&&!isNaN(Number(ai.score))? h("button",{class:"btn",type:"button",onclick:()=>{ pick = Math.round(Number(ai.score)); [...sp.children].forEach((x,i)=>x.setAttribute("aria-pressed", i===pick?"true":"false")); }},"Agree with AI") : null;
-    saveB.addEventListener("click", async ()=>{ if(pick==null){ toast("Choose a score from 0 to 5."); return; } saveB.disabled = true; try{ await ssPost({action:"teacherScore", row:it.row, score:pick, note:note.value}); it.tscore = pick; it.tnote = note.value; toast("Published."); items = items.filter(x=>x!==it || showAll.checked); sel = null; drawQ(); drawD(); status.textContent = items.length+" to review"; }catch(e){ toast(e.message); } finally{ saveB.disabled = false; } });
+    const agree = ai&&ai.score&&!isNaN(Number(ai.score))? h("button",{class:"btn",type:"button",onclick:()=>{ sp.value = fs1(ai.score); upd(); }},"Agree with AI") : null;
+    saveB.addEventListener("click", async ()=>{ const pv = numScore(sp.value); if(pv==null || pv<0 || pv>5){ toast("Enter a score from 0 to 5."); return; } const pick = Math.round(pv*2)/2; saveB.disabled = true; try{ await ssPost({action:"teacherScore", row:it.row, score:pick, note:note.value}); it.tscore = pick; it.tnote = note.value; toast("Published."); items = items.filter(x=>x!==it || showAll.checked); sel = null; drawQ(); drawD(); status.textContent = items.length+" to review"; }catch(e){ toast(e.message); } finally{ saveB.disabled = false; } });
     detail.append(h("div",{class:"panel stack"},
       h("div",{class:"eyebrow"}, it.section+(it.day?" · Day "+it.day:"")+" · "+it.task+" · "+new Date(it.time).toLocaleString()), h("h2",null, it.name),
       it.prompt? h("div",{class:"small"}, h("b",null,"Task: "), it.prompt) : null,
       it.link? h("a",{class:"btn sm",href:it.link,target:"_blank",rel:"noopener"}, "Open the recording") : null,
       it.transcript? h("div",{class:"rec-heard"}, h("b",null, it.section==="Speaking"? "Transcript: " : "Response: "), it.transcript) : (it.section==="Speaking"? h("div",{class:"small muted"},"No transcript from this device. Listen to the recording.") : null),
-      h("div",{class:"fb-scores"}, h("div",{class:"fb-score ai"}, h("div",{class:"small"},"AI estimate"), h("div",{class:"big"}, ai&&ai.score? ai.score : "–"), ai&&ai.band? h("div",{class:"small"},"≈ Band "+ai.band):null, ai&&ai.link? h("a",{href:ai.link,target:"_blank",rel:"noopener",style:"color:#fff"},"AI report"):null), h("div",{class:"fb-score"}, h("div",{class:"small muted"},"Your score"), sp)),
+      h("div",{class:"fb-scores"}, h("div",{class:"fb-score ai"}, h("div",{class:"small"},"AI estimate"), h("div",{class:"big"}, ai&&ai.score? ai.score : "–"), ai&&ai.band? h("div",{class:"small"},"≈ Band "+ai.band):null, ai&&ai.link? h("a",{href:ai.link,target:"_blank",rel:"noopener",style:"color:#fff"},"AI report"):null), h("div",{class:"fb-score"}, h("div",{class:"small muted"},"Your score (0 to 5, halves allowed)"), sp)),
+      flag, reportFor(it), fbDetail(it), ctxBox,
       h("label",{for:"tq-note",class:"small"},"Note to student"), note, h("div",{class:"row"}, agree, saveB)));
   }
   const showAll = h("input",{type:"checkbox",id:"tq-all"});
@@ -10826,7 +11040,7 @@ function a11yLabel(root){
 }
 try{ new MutationObserver(()=>{ clearTimeout(a11yLabel._t); a11yLabel._t = setTimeout(()=>a11yLabel(),150); }).observe(document.body,{childList:true,subtree:true}); }catch(e){}
 /* test hooks exist only when a test harness sets window.__BS_ENABLE_TEST before the page loads; nothing is exposed to students */
-if(window.__BS_ENABLE_TEST) window.__BS_TEST = {dayOverride, isUnlocked, modOpen, modCalc, loadGrants, setACC:c=>{ ACC = Object.assign({}, ACC_DEFAULT, c); }, getACC:()=>ACC, viewHash, parseHash, blkKey, buildCW, ssPost, ssGet, signedIn, syncNow, loadStudents, go, adoptSession, signOutGoogle, restoreProgress, syncLabel, syncDirty, S:()=>S, dayReqs, typingSeries, SYNC, timers:{clear(){ clearTimeout(_syncT); clearTimeout(_retryT); }}, save};
+if(window.__BS_ENABLE_TEST) window.__BS_TEST = {dayOverride, isUnlocked, modOpen, modCalc, loadGrants, setACC:c=>{ ACC = Object.assign({}, ACC_DEFAULT, c); }, getACC:()=>ACC, viewHash, parseHash, blkKey, buildCW, ssPost, ssGet, signedIn, syncNow, loadStudents, go, rubricFor, aiNum, gapInfo, wordsOf, alignWords, whyBlock, repeatReport, reportFor, ctxLine, resultRows, resultStats, rowStatus, resultsPanel, fbCard, stuSubCard, STU, RESV, fs1, adoptSession, signOutGoogle, restoreProgress, syncLabel, syncDirty, S:()=>S, dayReqs, typingSeries, SYNC, timers:{clear(){ clearTimeout(_syncT); clearTimeout(_retryT); }}, save};
 })();
 
 </script>
