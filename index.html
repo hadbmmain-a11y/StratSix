@@ -9491,8 +9491,9 @@ let simIv = null, simAuto = false;
 
 function simState(n){ S.sim = S.sim || {}; return S.sim[n] = S.sim[n] || {cur:null, done:[]}; }
 function simPlan(n){ return SIM.plan.find(p=>p.n===n); }
-function simOpen(p){ if(S.teacher) return true; if(p.mod!=="all" && !modOpen(p.mod)) return false; if(p.mod==="all") return SECS.every(s=>!!(S.days[dayKey(s,17)]||{}).done); return !p.after || !!(S.days[dayKey(p.mod,p.after)]||{}).done; }
-function simLockText(p){ if(p.mod!=="all" && !modOpen(p.mod)) return modLockText(p.mod); return p.mod==="all" ? "Unlocks when you complete Day 17 in all five modules" : "Unlocks when you complete "+scap(p.mod)+" Day "+p.after; }
+function simManual(p){ const v = ((ACC && ACC.sim)||{})[String(p.n)]; return v==="open" || v==="locked"? v : "auto"; }
+function simOpen(p){ if(S.teacher) return true; const man = simManual(p); if(man==="open") return true; if(man==="locked") return false; if(p.mod!=="all" && !modOpen(p.mod)) return false; if(p.mod==="all") return SECS.every(s=>!!(S.days[dayKey(s,17)]||{}).done); return !p.after || !!(S.days[dayKey(p.mod,p.after)]||{}).done; }
+function simLockText(p){ if(simManual(p)==="locked") return "Your teacher has not opened this test yet."; if(p.mod!=="all" && !modOpen(p.mod)) return modLockText(p.mod); return p.mod==="all" ? "Unlocks when you complete Day 17 in all five modules" : "Unlocks when you complete "+scap(p.mod)+" Day "+p.after; }
 function simLoad(n, cb){
   const B = window.BS_TESTS = window.BS_TESTS || {};
   if(B[n]){ cb(B[n]); return; }
@@ -10324,6 +10325,20 @@ function accessTool(){
     
     return h("div",{class:"stack",style:"gap:6px;padding:10px 0;border-top:1px solid var(--line)"}, h("div",{class:"row"}, h("b",{style:"min-width:90px"},cap(sec)), mode), h("div",{class:"row"}, h("label",{for:"as-"+sec,class:"small"},"Opens"), s, h("label",{for:"ae-"+sec,class:"small"},"Closes"), e), h("div",{class:"row"}, h("label",{for:"ar-"+sec,class:"small"},"Open days manually: all days up to Day"), rel, h("span",{class:"small muted"},"0 = off. These days open at once for every student, even if they finished the day before today or skipped it.")), dayRow, now);
   });
+  const simSwitch = (()=>{
+    const paintFns = [];
+    const btn = p => { const n = String(p.n); const b = h("button",{type:"button",id:"sa-"+n,"aria-label":"Test "+p.n+" "+(p.mod==="all"? "" : cap(p.mod)+" ")+p.role});
+      const paint = ()=>{ const v = (draft.sim||{})[n]||"auto"; b.textContent = p.role+(v==="open"?" ✓":v==="locked"?" 🔒":""); b.className = "btn sm"+(v==="open"?" primary":v==="locked"?" red":" outline"); b.title = v==="open"?"Open for everyone":v==="locked"?"Closed for everyone":"Usual rule (follows the module and the days finished)"; };
+      b.addEventListener("click",()=>{ draft.sim = draft.sim||{}; const v = draft.sim[n]||"auto"; const nx = v==="auto"?"open":v==="open"?"locked":"auto"; if(nx==="auto") delete draft.sim[n]; else draft.sim[n] = nx; if(!Object.keys(draft.sim).length) delete draft.sim; paintFns.forEach(f=>f()); });
+      paintFns.push(paint); paint(); return b; };
+    const setAll = v => { draft.sim = draft.sim||{}; SIM.plan.forEach(p=>{ if(v==="auto") delete draft.sim[String(p.n)]; else draft.sim[String(p.n)] = v; }); if(!Object.keys(draft.sim).length) delete draft.sim; paintFns.forEach(f=>f()); };
+    const quick = (id,label,v)=>{ const b = h("button",{type:"button",class:"btn sm ghost",id}, label); b.addEventListener("click",()=>setAll(v)); return b; };
+    const line = (label, plans)=>h("div",{class:"row",style:"flex-wrap:wrap;gap:6px"}, h("b",{style:"min-width:90px"}, label), ...plans.map(btn));
+    return h("div",{class:"stack",style:"gap:6px;padding:10px 0;border-top:1px solid var(--line)",id:"sim-switch"}, h("div",{class:"row"}, h("b",null,"Test Simulator")),
+      h("div",{class:"small muted"},"Open or close each test by hand. Click a test to change it: plain = usual rule (follows the module switch and the days a student has finished), ✓ = open for everyone now, even if the module is closed, 🔒 = closed for everyone. A test closed while a student is taking it stays saved; the student continues when you open it again."),
+      ...["reading","listening","writing","speaking"].map(m=>line(cap(m), SIM.plan.filter(p=>p.mod===m))), line("Final rehearsals", SIM.plan.filter(p=>p.mod==="all")),
+      h("div",{class:"row",style:"gap:6px"}, quick("sa-open-all","Open all","open"), quick("sa-close-all","Close all","locked"), quick("sa-reset","Back to usual rule","auto")));
+  })();
   const saveBtn = h("button",{class:"btn primary",type:"button"},"Save and publish for all students");
   saveBtn.addEventListener("click", async ()=>{
     for(const sec of SECS){ const c = draft[sec]; if(c.mode==="dates" && (!c.s || !c.e || c.e < c.s)){ toast(cap(sec)+": choose an opening date and a later closing date."); return; } }
@@ -10340,7 +10355,7 @@ function accessTool(){
       status.append(c==="nokey"? "Sign in with the teacher Google account in the Review queue above first." : (e && e.message) ? e.message : "Not saved. Try again.");
     }
   });
-  return h("div",{class:"panel stack",style:"margin-top:16px"}, h("h2",null,"Module switches"), h("p",{class:"muted small"},"Choose what students can open. “Open by dates” opens the module on the first date and closes it on the second; students then keep "+REVIEW_DAYS+" days of review access. Changes reach every student after you press Save. Simulator tests follow the same switches."), ...rows, h("div",{class:"row"}, saveBtn), status);
+  return h("div",{class:"panel stack",style:"margin-top:16px"}, h("h2",null,"Module switches"), h("p",{class:"muted small"},"Choose what students can open. “Open by dates” opens the module on the first date and closes it on the second; students then keep "+REVIEW_DAYS+" days of review access. Changes reach every student after you press Save. Simulator tests follow the same switches unless you open or close a test below."), ...rows, simSwitch, h("div",{class:"row"}, saveBtn), status);
 }
 
 /* ---------- individual access: the teacher grants it on the server (table unlock_grants) ---------- */
@@ -11040,7 +11055,7 @@ function a11yLabel(root){
 }
 try{ new MutationObserver(()=>{ clearTimeout(a11yLabel._t); a11yLabel._t = setTimeout(()=>a11yLabel(),150); }).observe(document.body,{childList:true,subtree:true}); }catch(e){}
 /* test hooks exist only when a test harness sets window.__BS_ENABLE_TEST before the page loads; nothing is exposed to students */
-if(window.__BS_ENABLE_TEST) window.__BS_TEST = {dayOverride, isUnlocked, modOpen, modCalc, loadGrants, setACC:c=>{ ACC = Object.assign({}, ACC_DEFAULT, c); }, getACC:()=>ACC, viewHash, parseHash, blkKey, buildCW, ssPost, ssGet, signedIn, syncNow, loadStudents, go, rubricFor, aiNum, gapInfo, wordsOf, alignWords, whyBlock, repeatReport, reportFor, ctxLine, resultRows, resultStats, rowStatus, resultsPanel, fbCard, stuSubCard, STU, RESV, fs1, adoptSession, signOutGoogle, restoreProgress, syncLabel, syncDirty, S:()=>S, dayReqs, typingSeries, SYNC, timers:{clear(){ clearTimeout(_syncT); clearTimeout(_retryT); }}, save};
+if(window.__BS_ENABLE_TEST) window.__BS_TEST = {dayOverride, isUnlocked, modOpen, modCalc, loadGrants, setACC:c=>{ ACC = Object.assign({}, ACC_DEFAULT, c); }, getACC:()=>ACC, viewHash, parseHash, blkKey, buildCW, ssPost, ssGet, signedIn, syncNow, loadStudents, go, simOpen, simPlan, simLockText, getAcc:()=>ACC, setAcc:o=>{ ACC = Object.assign({}, ACC_DEFAULT, o||{}); }, rubricFor, aiNum, gapInfo, wordsOf, alignWords, whyBlock, repeatReport, reportFor, ctxLine, resultRows, resultStats, rowStatus, resultsPanel, fbCard, stuSubCard, STU, RESV, fs1, adoptSession, signOutGoogle, restoreProgress, syncLabel, syncDirty, S:()=>S, dayReqs, typingSeries, SYNC, timers:{clear(){ clearTimeout(_syncT); clearTimeout(_retryT); }}, save};
 })();
 
 </script>
